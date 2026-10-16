@@ -99,3 +99,11 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 2. Node 24.14.1 run: `list` and `move "UST-Test-*"` xare to yoyo pass with now-sdk 4.13.6. Four sets skipped as already committed; UST-Test-3 reported its expected "newer local update" problem (it was backed out earlier) with exit 1. Node 22 not installed; `engines.node` left at 20.18.
 3. Still open: item 2 (source variable names), item 3 (OAuth client credentials), item 4 (repo split, needs go-ahead).
 4. Decision (2026-10-16): `engines.node` is now `>=22`. Source variables use the dev-passport-brazil style: `move --from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`; `SN_SDK_SOURCE_*` is removed. `--from` or `--from-env` is now required. Smoke-tested with session variables mapped to `SN_SDK_TEST_*`/`SN_SDK_PROD_*` (xare to yoyo). Repo `jon-lind-sn/update-set-cicd` exists (private) and is the origin remote; goes public before GitHub Actions testing.
+
+## Spike: app to update set (2026-10-16)
+
+1. `now-sdk build` output (`dist/app`) of dev-passport-brazil 0.0.21 converted with `update-set-gen/gen_update_set.py` (35 records, 2 DELETE actions already present) imported to yoyo, previewed clean, and committed. App version on yoyo is 0.0.21.
+2. Generator bug: root `<application>` holds the scope name, platform needs the scope sys_id. Worked around with `sed`; note at `snconnect/docs/gen-update-set-scope-id-issue.md`.
+3. Re-importing a corrected file with unchanged ids reuses the earlier retrieved copy. A `--replace` option is a candidate.
+4. Poll default timeout is now 120000 ms (now-sdk uses 900000) and progress prints every 10 s with status. A job stuck at Pending adds a hint on timeout. A stalled yoyo scheduler caused a long wait earlier; it recovered by itself.
+5. Not yet verified: that DELETE records remove records on the target.

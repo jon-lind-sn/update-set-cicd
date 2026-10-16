@@ -14,7 +14,7 @@ export class CicdError extends Error {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export class Cicd {
-    constructor(http, log, { pollTimeout = 900000 } = {}) {
+    constructor(http, log, { pollTimeout = 120000 } = {}) {
         this.http = http
         this.log = log
         this.pollTimeout = pollTimeout
@@ -33,6 +33,7 @@ export class Cicd {
     async poll(progressId, { allowFailure = false } = {}) {
         this.log.info(`Waiting for operation to complete (progress id: ${progressId})...`)
         const deadline = Date.now() + this.pollTimeout
+        let last = {}
         for (let i = 1; Date.now() < deadline; i++) {
             await sleep(1000)
             const { result = {} } = await this.http.json(`api/sn_cicd/progress/${progressId}`)
@@ -46,10 +47,12 @@ export class Cicd {
             }
             if (i % 10 === 0) {
                 const msg = result.status_message ? `: ${result.status_message}` : ''
-                this.log.info(`Still in progress (${result.percent_complete ?? 0}%)${msg}`)
+                this.log.info(`  ${i}s, ${STATUS[status] ?? 'status ' + status}, ${result.percent_complete ?? 0}%${msg}`)
             }
+            last = result
         }
-        throw new CicdError(`Timed out after ${this.pollTimeout} ms waiting for progress ${progressId}`)
+        const hint = String(last.status ?? '0') === '0' ? ' The job never started; check that the instance is running scheduled jobs.' : ''
+        throw new CicdError(`Timed out after ${Math.round(this.pollTimeout / 1000)}s waiting for progress ${progressId}.${hint}`, last)
     }
 
     async _run(path, opts, wait) {

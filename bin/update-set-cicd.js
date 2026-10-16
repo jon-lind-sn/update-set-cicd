@@ -24,7 +24,7 @@ const shared = (y) =>
 const waitOpts = (y) =>
     y
         .option('wait', { type: 'boolean', default: true, describe: 'Wait for the operation to finish by polling its progress' })
-        .option('poll-timeout', { type: 'number', default: 900000, describe: 'Maximum time in milliseconds to wait for each operation' })
+        .option('poll-timeout', { type: 'number', default: 120000, describe: 'Maximum time in milliseconds to wait for each operation (progress prints every 10s)' })
 
 const auth = (y) => y.option('auth', { alias: 'a', type: 'string', describe: 'Credential alias to use for authentication with instance' })
 
