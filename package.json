@@ -1,0 +1,33 @@
+{
+  "name": "update-set-cicd",
+  "version": "0.1.0",
+  "description": "Move ServiceNow update sets between instances using Now SDK credentials, in the style of now-sdk cicd.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jon-lind-sn/update-set-cicd.git"
+  },
+  "type": "module",
+  "bin": {
+    "update-set-cicd": "bin/update-set-cicd.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "dependencies": {
+    "@servicenow/sdk": "4.13.6",
+    "@xmldom/xmldom": "0.9.12",
+    "yargs": "17.7.2"
+  },
+  "keywords": [
+    "servicenow",
+    "update-set",
+    "now-sdk",
+    "cicd"
+  ],
+  "author": "Jon Lind"
+}
