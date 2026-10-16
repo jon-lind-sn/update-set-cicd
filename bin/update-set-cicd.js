@@ -42,8 +42,7 @@ const selection = (y, { state = true } = {}) => {
 
 const conflict = (y) =>
     y
-        .option('on-conflict', { type: 'string', choices: ['fail', 'touch', 'force'], default: 'fail', describe: 'Preview problems: fail (stop, nothing committed), touch (reset timestamps and re-upload so incoming changes win), force (force_commit)' })
-        .option('as-new-version', { type: 'boolean', default: false, describe: 'Regenerate sys_ids and import under the next " v N" name' })
+        .option('on-conflict', { type: 'string', choices: ['fail', 'force'], default: 'fail', describe: 'Preview problems: fail (stop, nothing committed; resolve in the instance UI and re-run) or force (force_commit)' })
 
 yargs(hideBin(process.argv))
     .scriptName('update-set-cicd')

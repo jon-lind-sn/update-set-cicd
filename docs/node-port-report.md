@@ -92,3 +92,9 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
    3. Prerequisites either way (from the dev-passport-brazil setup): `glide.oauth.inbound.client.credential.grant_type.enabled=true` (KB1645212), a service user with admin, an OAuth Client Credentials Grant inbound integration per instance.
 4. **Repo split steps.** Create the GitHub repo, move `bin/`, `src/`, `package.json`, `package-lock.json`, `docs/node-port-*.md`, add LICENSE (MIT) and README from the plan's sample docs, then remove the Node files from this worktree. Creating the public repo and pushing need Jon's go-ahead at that point.
 5. **Delivery.** `npx github:jon-lind-sn/update-set-cicd` once public; npmjs.org publishing optional later.
+
+## Resume log (2026-10-16)
+
+1. Removed `--on-conflict touch`, `--as-new-version`, `touchTimestamps`, `asNewVersion`, and `nextVersionName` from the Node code (Decisions 2 and 3).
+2. Node 24.14.1 run: `list` and `move "UST-Test-*"` xare to yoyo pass with now-sdk 4.13.6. Four sets skipped as already committed; UST-Test-3 reported its expected "newer local update" problem (it was backed out earlier) with exit 1. Node 22 not installed; `engines.node` left at 20.18.
+3. Still open: item 2 (source variable names), item 3 (OAuth client credentials), item 4 (repo split, needs go-ahead).

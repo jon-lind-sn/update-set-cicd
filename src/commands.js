@@ -63,7 +63,7 @@ export async function exportCmd(log, args) {
 }
 
 function deliverOpts(args, commit) {
-    return { onConflict: args.onConflict, asNewVersion: args.asNewVersion, commit, wait: args.wait }
+    return { onConflict: args.onConflict,commit, wait: args.wait }
 }
 
 function summarize(result, label) {
@@ -123,7 +123,7 @@ export async function commit(log, args) {
     const items = [...latest.values()].map((r) => ({
         name: r.name,
         sourceSysId: r.remote_sys_id,
-        loadXml: () => { throw new Error(`--on-conflict touch needs the original XML; use move or import for ${r.name}`) },
+        loadXml: () => { throw new Error(`commit cannot re-upload ${r.name}; use move or import`) },
     }))
     const opts = { ...deliverOpts(args, true), onConflict: args.force ? 'force' : 'fail' }
     const result = await deliver({ target: tgt.inst, http: tgt.http, cicd: tgt.cicd, log, opts }, items)
