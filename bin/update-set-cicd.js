@@ -56,8 +56,10 @@ yargs(hideBin(process.argv))
         run(cmd.list))
     .command('move', 'Copy update sets from --from to --to, preview, and commit', (y) =>
         shared(waitOpts(conflict(selection(y))))
-            .option('from', { type: 'string', describe: 'Source credential alias (default: SN_SDK_SOURCE_* environment variables)' })
+            .option('from', { type: 'string', describe: 'Source credential alias' })
+            .option('from-env', { type: 'string', describe: 'Source from environment variables SN_SDK_<NAME>_* (e.g. TEST reads SN_SDK_TEST_INSTANCE_URL)' })
             .option('to', { type: 'string', describe: 'Target credential alias (default: SN_SDK_* environment variables or the default alias)' })
+            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL)' })
             .option('preview-only', { type: 'boolean', default: false, describe: 'Upload and preview, report problems, do not commit' }),
         run(cmd.move))
     .command('commit', 'Commit retrieved update sets that are already on the instance', (y) =>

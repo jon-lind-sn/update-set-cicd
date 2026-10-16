@@ -16,6 +16,17 @@ async function open(log, args, which) {
     return { inst, http, cicd: new Cicd(http, log, { pollTimeout: args.pollTimeout }) }
 }
 
+// --from/--to take a stored alias; --from-env/--to-env NAME read SN_SDK_NAME_*
+// (same variable names as SN_SDK_*, e.g. SN_SDK_TEST_INSTANCE_URL).
+// The target alone may fall back to plain SN_SDK_* or the default alias.
+function instanceRef(alias, envName, flag, optional = false) {
+    if (alias && envName) throw new Error(`Use either ${flag} or ${flag}-env, not both`)
+    if (alias) return { alias }
+    if (envName) return { prefix: `SN_SDK_${envName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_` }
+    if (!optional) throw new Error(`Provide ${flag} <alias> or ${flag}-env <NAME>`)
+    return {}
+}
+
 // Local update sets on the source matching the selection, oldest first (commit order).
 async function sourceUpdateSets(inst, args) {
     const rows = await inst.query('sys_update_set', {
@@ -63,7 +74,7 @@ export async function exportCmd(log, args) {
 }
 
 function deliverOpts(args, commit) {
-    return { onConflict: args.onConflict,commit, wait: args.wait }
+    return { onConflict: args.onConflict, commit, wait: args.wait }
 }
 
 function summarize(result, label) {
@@ -78,8 +89,8 @@ function summarize(result, label) {
 }
 
 export async function move(log, args) {
-    const src = await open(log, args, args.from ? { alias: args.from } : { prefix: 'SN_SDK_SOURCE_' })
-    const tgt = await open(log, args, args.to ? { alias: args.to } : {})
+    const src = await open(log, args, instanceRef(args.from, args.fromEnv, '--from'))
+    const tgt = await open(log, args, instanceRef(args.to, args.toEnv, '--to', true))
     const rows = await sourceUpdateSets(src.inst, args)
     log.info(`Found ${rows.length} update set(s) matching ${describeSelection(args)} (state ${args.state}) on ${src.inst.label}`)
     const items = rows.map((r) => ({

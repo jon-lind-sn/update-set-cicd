@@ -6,7 +6,7 @@ Move ServiceNow update sets between instances from a laptop or any continuous in
 
 ## Requirements
 
-1. Node.js 20.18 or later.
+1. Node.js 22 or later.
 2. ServiceNow Now SDK credentials (`@servicenow/sdk` is a dependency; no separate install).
 
 ## Quick start
@@ -17,6 +17,10 @@ node bin/update-set-cicd.js --help
 node bin/update-set-cicd.js list -a <alias>
 node bin/update-set-cicd.js move --update-set-name "My-Project-*" --from <source-alias> --to <target-alias>
 ```
+
+## CI/CD credentials
+
+`move` reads each instance from the same variables `now-sdk` uses in CI, with the instance name inserted: `--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*` (`INSTANCE_URL`, `AUTH_TYPE`, `USER`, `USER_PWD`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`). Single-instance commands read plain `SN_SDK_*`.
 
 ## License
 
