@@ -107,3 +107,12 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 3. Re-importing a corrected file with unchanged ids reuses the earlier retrieved copy. A `--replace` option is a candidate.
 4. Poll default timeout is now 120000 ms (now-sdk uses 900000) and progress prints every 10 s with status. A job stuck at Pending adds a hint on timeout. A stalled yoyo scheduler caused a long wait earlier; it recovered by itself.
 5. Not yet verified: that DELETE records remove records on the target.
+
+## Next steps (2026-10-16)
+
+1. **`--replace` flag** on `move` and `import`. Skips the retrieved-copy reuse check for that run: uploads the XML as a new retrieved update set and previews it. Reason: the existence check keys on source sys_id (`remote_sys_id`), so a corrected file with unchanged ids silently reuses the earlier copy (seen in the app-to-update-set spike). Later option: detect changed content automatically (hash of the XML) so the flag is rarely needed.
+2. Sample SDK app inside this repo; use it to test that DELETE records remove records on the target.
+3. Tier 1 unit tests (`node:test`) as the first GitHub Actions job (Node 22 and 24, no secrets).
+4. `scripts/integration.sh` with stages (unit, seed, move, assert, cleanup) that the workflow reuses. Seed with the `sn_cicd` update set `create` endpoint plus Table API fix script records named `UST-IT-<runid>`; no system properties, no instance changes. Verify whether `create` sets the new update set as current.
+5. Run the OAuth client credentials grant (open item 3 above) and Node 22.
+6. Push to `jon-lind-sn/update-set-cicd` (private) when Jon says so.
