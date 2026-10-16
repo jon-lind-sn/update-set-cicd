@@ -1,0 +1,63 @@
+# Reusable workflow: move update sets from one instance to another.
+# Call it from a pipeline with the instance names (DEV, TEST, PROD) to use:
+#
+#   jobs:
+#     to-test:
+#       uses: jon-lind-sn/update-set-cicd/.github/workflows/move-update-sets.yml@main
+#       with: { from: DEV, to: TEST, pattern: "My-Project-*" }
+#       secrets: inherit
+#
+# Instance names map to SN_SDK_<NAME>_* variables. Add a block per instance.
+# The target's GitHub environment (e.g. production) can require approval.
+name: Move update sets
+
+on:
+  workflow_call:
+    inputs:
+      from:
+        description: Source instance name (DEV, TEST, PROD)
+        type: string
+        required: true
+      to:
+        description: Target instance name (DEV, TEST, PROD)
+        type: string
+        required: true
+      pattern:
+        description: Update set name or pattern with * (e.g. My-Project-*)
+        type: string
+        required: true
+      on-conflict:
+        description: fail or force
+        type: string
+        default: fail
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.to }}   # environments named DEV, TEST, PROD; add required reviewers on PROD
+    env:
+      SN_SDK_NODE_ENV: SN_SDK_CI_INSTALL
+      SN_SDK_DEV_AUTH_TYPE: oauth
+      SN_SDK_DEV_INSTANCE_URL: ${{ vars.SN_SDK_DEV_INSTANCE_URL }}
+      SN_SDK_DEV_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_DEV_OAUTH_CLIENT_ID }}
+      SN_SDK_DEV_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_DEV_OAUTH_CLIENT_SECRET }}
+      SN_SDK_TEST_AUTH_TYPE: oauth
+      SN_SDK_TEST_INSTANCE_URL: ${{ vars.SN_SDK_TEST_INSTANCE_URL }}
+      SN_SDK_TEST_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_ID }}
+      SN_SDK_TEST_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_SECRET }}
+      SN_SDK_PROD_AUTH_TYPE: oauth
+      SN_SDK_PROD_INSTANCE_URL: ${{ vars.SN_SDK_PROD_INSTANCE_URL }}
+      SN_SDK_PROD_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_ID }}
+      SN_SDK_PROD_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_SECRET }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Move update sets
+        env:
+          PATTERN: ${{ inputs.pattern }}
+        run: >
+          npx github:jon-lind-sn/update-set-cicd move
+          --update-set-name "$PATTERN"
+          --from-env "${{ inputs.from }}" --to-env "${{ inputs.to }}"
+          --on-conflict "${{ inputs.on-conflict }}" -o json
