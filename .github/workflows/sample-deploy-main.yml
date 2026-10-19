@@ -1,5 +1,5 @@
-# Sample app: build once, commit on TEST, wait for approval, commit the same
-# update set on PROD. Runs on every merge to main that changes the sample or the
+# Sample app: build once, commit on TEST, wait for approval, move the committed
+# update set from TEST to PROD. Runs on every merge to main that changes the sample or the
 # tool that processes it, and can be started by hand.
 name: Sample deploy to Prod
 
@@ -16,6 +16,7 @@ on:
       - '.github/workflows/sample-deploy-main.yml'
       - '.github/workflows/_sample-build.yml'
       - '.github/workflows/_import-update-set.yml'
+      - '.github/workflows/_move-update-sets.yml'
   workflow_dispatch:
     inputs:
       on-conflict:
@@ -43,18 +44,15 @@ jobs:
       on-conflict: ${{ inputs.on-conflict || 'fail' }}
     secrets: inherit
 
-  approve-prod:
-    needs: deploy-test
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Manual approval gate
-        run: echo "Approved for production"
-
+  # Promote the update set that TEST committed (the same record a manual pull
+  # from TEST copies). The move job runs in the `production` environment, so a
+  # reviewer approves it before anything touches PROD.
   deploy-prod:
-    needs: approve-prod
-    uses: ./.github/workflows/_import-update-set.yml
+    needs: [build, deploy-test]
+    uses: ./.github/workflows/_move-update-sets.yml
     with:
-      instance: PROD
+      pattern: ${{ needs.build.outputs.update-set-name }}
+      from: TEST
+      to: PROD
       on-conflict: ${{ inputs.on-conflict || 'fail' }}
     secrets: inherit

@@ -12,9 +12,8 @@ This repository holds two things, and each has its own workflows. Trigger workfl
 2. [`sample-deploy-main.yml`](sample-deploy-main.yml) runs on every merge to `main` that changes the sample or the tool, and can be started by hand (`workflow_dispatch`). It runs these jobs in order:
    1. `build` builds once and generates the update set.
    2. `deploy-test` imports, previews, and commits that update set on TEST.
-   3. `approve-prod` pauses for a reviewer on the `production` environment.
-   4. `deploy-prod` commits the same file on PROD.
-3. [`_sample-build.yml`](_sample-build.yml) is the library workflow for the build and generate steps. It runs `now-sdk build --frozenKeys`, then `update-set-cicd generate`, then uploads the artifact.
+   3. `deploy-prod` pauses for a reviewer on the `production` environment, then moves the committed update set from TEST to PROD with `_move-update-sets.yml`.
+3. [`_sample-build.yml`](_sample-build.yml) is the library workflow for the build and generate steps. It runs `now-sdk build --frozenKeys`, then `update-set-cicd generate`, then uploads the artifact and outputs the update set name.
 4. [`_import-update-set.yml`](_import-update-set.yml) is the library workflow that downloads the artifact and commits it on one instance (`TEST` or `PROD`) with `update-set-cicd import --to-env`. A preview problem stops the run and nothing is committed (`on-conflict: fail`).
 
 Both sample trigger workflows run the tool from the checkout, so a PR is tested against its own code.

@@ -5,6 +5,10 @@ name: Sample build (library)
 
 on:
   workflow_call:
+    outputs:
+      update-set-name:
+        description: Name of the generated update set
+        value: ${{ jobs.build.outputs.update-set-name }}
 
 permissions:
   contents: read
@@ -12,6 +16,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      update-set-name: ${{ steps.generate.outputs.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -37,7 +43,10 @@ jobs:
         working-directory: update-set-cicd-sample
 
       - name: Generate update set
-        run: node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir update-set
+        id: generate
+        run: |
+          node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir update-set -o json | tee generate.json
+          echo "name=$(node -p "require('./generate.json').result.name")" >> "$GITHUB_OUTPUT"
 
       - name: Upload update set
         uses: actions/upload-artifact@v7
