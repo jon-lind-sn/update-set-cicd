@@ -1,5 +1,5 @@
 # Reusable workflow: move update sets from the TEST instance to the PROD instance.
-# Variable and secret names are listed in README.md ("Set up GitHub and ServiceNow").
+# Variable and secret names are listed in README.md ("Set up the pipeline").
 #
 #   jobs:
 #     promote:
@@ -50,7 +50,7 @@ jobs:
       SN_SDK_PROD_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_ID }}
       SN_SDK_PROD_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_SECRET }}
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22   # keep in sync with .nvmrc (this workflow has no checkout)
       - name: Move update sets

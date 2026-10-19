@@ -1,12 +1,21 @@
 # Sample app: build once, commit on TEST, wait for approval, commit the same
-# update set on PROD. Manual-only for now; to run on every merge to main, add
-#   push:
-#     branches: [main]
-#     paths: [ ...same paths as sample-pr-validation.yml... ]
-# under `on:`.
+# update set on PROD. Runs on every merge to main that changes the sample or the
+# tool that processes it, and can be started by hand.
 name: Sample deploy to Prod
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'update-set-cicd-sample/**'
+      - 'bin/**'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.nvmrc'
+      - '.github/workflows/sample-deploy-main.yml'
+      - '.github/workflows/_sample-build.yml'
+      - '.github/workflows/_import-update-set.yml'
   workflow_dispatch:
     inputs:
       on-conflict:
@@ -31,7 +40,7 @@ jobs:
     uses: ./.github/workflows/_import-update-set.yml
     with:
       instance: TEST
-      on-conflict: ${{ inputs.on-conflict }}
+      on-conflict: ${{ inputs.on-conflict || 'fail' }}
     secrets: inherit
 
   approve-prod:
@@ -47,5 +56,5 @@ jobs:
     uses: ./.github/workflows/_import-update-set.yml
     with:
       instance: PROD
-      on-conflict: ${{ inputs.on-conflict }}
+      on-conflict: ${{ inputs.on-conflict || 'fail' }}
     secrets: inherit

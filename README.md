@@ -1,105 +1,82 @@
 # update-set-cicd
 
-Move ServiceNow update sets between instances from a laptop or any continuous integration and continuous delivery (CI/CD) system, configured and invoked the same way as `now-sdk cicd`.
+Move ServiceNow update sets between instances from a laptop or from a continuous integration and continuous delivery (CI/CD) pipeline, using the credentials and conventions of the [ServiceNow SDK](https://www.npmjs.com/package/@servicenow/sdk). It can also build an update set from a Now SDK (Fluent) app, so an SDK app can be promoted TEST to PROD with update sets instead of the Application Repository.
 
-**Status: work in progress.** The design is in [docs/node-port-plan.md](docs/node-port-plan.md) and the latest test results and open items are in [docs/node-port-report.md](docs/node-port-report.md).
+This repository holds the command line tool and a sample Fluent app (`update-set-cicd-sample/`) with a working GitHub Actions pipeline.
 
-## Requirements
+> **Caution:** the pipeline writes to your instances without a human in the loop, except for the approval gate before PROD. Start with sub-production instances and keep secrets out of version control.
 
-1. Node.js 22 or later. `.nvmrc` pins 22: run `nvm use` in this folder.
-2. ServiceNow Now SDK credentials (`@servicenow/sdk` is a dependency; no separate install).
+## Use the tool
 
-## Quick start
+Requires Node.js 22 (`nvm use` picks it up from `.nvmrc`).
 
 ```bash
 npm install
 node bin/update-set-cicd.js --help
-node bin/update-set-cicd.js list -a <alias>
-node bin/update-set-cicd.js generate <app>/dist/app --out-dir out
-node bin/update-set-cicd.js import out/*.xml -a <alias> --commit
-node bin/update-set-cicd.js move --update-set-name "My-Project-*" --from <source-alias> --to <target-alias>
 ```
 
-## Generate an update set from a Now SDK app
+| Command | What it does |
+|---|---|
+| `list` | List update sets on an instance |
+| `move` | Copy update sets from one instance to another, preview, and commit |
+| `import <files>` | Load XML files, preview, and optionally commit (`--commit`) |
+| `export` | Write update sets to local XML files |
+| `commit` / `rollback` | Commit retrieved update sets already on the instance, or back one out |
+| `generate <app-dir>` | Build an update set XML from a Now SDK build folder (`dist/app`) |
 
-`generate <app-dir>` reads a Now SDK build folder (`dist/app`) and writes a Retrieved Update Set XML named `<App-Name>-<version>.xml`. Every generated id is a hash of the app content. The same app gives the same ids, so an update set already on the target is reported as already committed and skipped. A change to the app gives new ids and uploads as a new update set. Each now-sdk build writes a random serial number and timestamp into an SBOM record; those two values are left out of the hash, so a rebuild of unchanged source keeps its ids. Pass `--replace` to include them, which makes every new build a new update set. Run `npm test` for the unit tests.
+Pick instances with a stored Now SDK alias (`--auth`, `--from`, `--to`) or with environment variables (`--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`). Add `-o json` for machine-readable output. Re-running a command for an update set that is already committed reports it and skips it.
 
-## CI/CD credentials
+## Set up the pipeline
 
-`move` reads each instance from the same variables `now-sdk` uses in CI, with the instance name inserted: `--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*` (`INSTANCE_URL`, `AUTH_TYPE`, `USER`, `USER_PWD`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`). Empty values are ignored. Single-instance commands read plain `SN_SDK_*`. Set `SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL` to make `now-sdk` use these variables instead of a stored alias.
+The pipeline has two instances: TEST (update sets are committed here first) and PROD (promoted here after approval). It authenticates with Open Authorization (OAuth) client credentials, which needs no interactive login. Basic authentication also works.
 
-## Set up GitHub and ServiceNow
+1. Fork this repository and clone it.
+2. On each instance, create the OAuth client (skip for basic authentication):
+   1. Create or choose a service user with the `admin` role and Identity Type `Human`.
+   2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` ([KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212)).
+   3. Go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant. Set Name to `SDK CI`, Provider Name to `SDK CI Provider` (type it in), and OAuth application user to the service user. Leave "Allow access only to APIs in selected scope" unchecked and leave the OpenID Connect (OIDC) provider empty. Save, and copy the Client ID and Client Secret.
+3. Check each credential in your own terminal before storing it. Success prints `{"ok":true`:
 
-The pipeline has two instances: TEST (update sets are committed here first) and PROD (update sets are promoted here after approval). Each instance authenticates with Open Authorization (OAuth) client credentials, which needs no interactive login, or with basic authentication.
+   ```bash
+   SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_AUTH_TYPE=oauth \
+   SN_SDK_INSTANCE_URL=https://your-instance.service-now.com \
+   SN_SDK_OAUTH_CLIENT_ID=<client-id> SN_SDK_OAUTH_CLIENT_SECRET='<client-secret>' \
+   npx @servicenow/sdk query sys_user -q "active=true" --limit 1 -o json
+   ```
 
-### 1. Prepare each ServiceNow instance (OAuth only)
+4. Store the values in GitHub. Install the [GitHub CLI](https://github.com/cli/cli#installation), run `gh auth login`, then:
 
-Repeat for the TEST and PROD instances. Skip this section for an instance that uses basic authentication.
+   ```bash
+   scripts/setup-cicd.sh --repo <owner>/<repo>
+   ```
 
-1. Create or choose a service user with the `admin` role. Set its Identity Type to `Human`; the installer rejects other identity types.
-2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` (type `true | false`). Create it in `sys_properties` if it is missing. Reference: [KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212).
-3. Create the OAuth client. Go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
-   1. Name: `SDK CI`.
-   2. Provider Name: `SDK CI Provider` (type it in manually).
-   3. OAuth application user: the service user from step 1.
-   4. Allow access only to APIs in selected scope: leave unchecked.
-   5. OpenID Connect (OIDC) provider: leave empty. OIDC providers do not issue tokens for the client credentials grant.
-   6. Save, and dismiss the "assign an auth scope" warning.
-4. Open the saved registry entry and copy the Client ID and Client Secret.
+   The script prompts for an instance name or URL, the auth type, and the credentials for TEST and PROD, then sets these (leave a prompt blank to keep an existing secret):
 
-### 2. Check each credential before storing it
+   | Name | Kind | Used when |
+   |---|---|---|
+   | `SN_SDK_{TEST,PROD}_INSTANCE_URL` | variable | always |
+   | `SN_SDK_{TEST,PROD}_AUTH_TYPE` | variable (`oauth` or `basic`) | always |
+   | `SN_SDK_{TEST,PROD}_OAUTH_CLIENT_ID` and `_OAUTH_CLIENT_SECRET` | secrets | oauth |
+   | `SN_SDK_{TEST,PROD}_USER` | variable | basic |
+   | `SN_SDK_{TEST,PROD}_USER_PWD` | secret | basic |
 
-This runs the same code path as the pipeline. Run it in your own terminal so the secret stays out of chat history and logs.
+5. Create the approval gate. In the repository go to Settings > Environments > New environment, name it `production`, and add Required reviewers. Reviewers on a private repository need a paid GitHub plan.
 
-```bash
-SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_AUTH_TYPE=oauth \
-SN_SDK_INSTANCE_URL=https://your-instance.service-now.com \
-SN_SDK_OAUTH_CLIENT_ID=<client-id> SN_SDK_OAUTH_CLIENT_SECRET='<client-secret>' \
-npx @servicenow/sdk query sys_user -q "active=true" --limit 1 -o json
-```
+## Run it
 
-Success prints `{"ok":true, ...}`. A failure prints `OAuth client_credentials token request failed`, which means a wrong ID or secret, a registry entry still restricted to a scope, or the system property from step 1 not set to `true`.
+1. Create a branch, change the sample app, and bump `version` in `update-set-cicd-sample/package.json`. Each version is a new update set.
+2. Open a pull request (PR). The `Sample PR validation` check builds the app and generates the update set, and attaches it to the run. It touches no instance.
+3. Merge to `main`. `Sample deploy to Prod` builds once, commits the update set on TEST, waits for a reviewer to approve the `production` environment, then commits the same file on PROD. You can also start it by hand from the Actions tab.
+4. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
-### 3. Store the values in GitHub
+The `CI (module)` workflow runs the unit tests (`npm test`) when the tool itself changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 
-Run the setup script. It prompts for each value, stores them with the GitHub CLI (`gh`), and leaves a secret unchanged if you press Enter at its prompt.
+## Learn more
 
-```bash
-gh auth login
-scripts/setup-cicd.sh --repo jon-lind-sn/update-set-cicd
-```
-
-Manual equivalent, per instance (`TEST` or `PROD`):
-
-| Setting | Kind | Used when |
-|---|---|---|
-| `SN_SDK_<NAME>_INSTANCE_URL` | variable | always |
-| `SN_SDK_<NAME>_AUTH_TYPE` | variable (`basic` or `oauth`) | always |
-| `SN_SDK_<NAME>_USER` | variable | basic |
-| `SN_SDK_<NAME>_USER_PWD` | secret | basic |
-| `SN_SDK_<NAME>_OAUTH_CLIENT_ID` | secret | oauth |
-| `SN_SDK_<NAME>_OAUTH_CLIENT_SECRET` | secret | oauth |
-
-```bash
-gh variable set SN_SDK_PROD_INSTANCE_URL --repo jon-lind-sn/update-set-cicd --body "https://your-prod-instance.service-now.com"
-gh secret set SN_SDK_PROD_OAUTH_CLIENT_ID --repo jon-lind-sn/update-set-cicd --body "<client-id>"
-gh secret set SN_SDK_PROD_OAUTH_CLIENT_SECRET --repo jon-lind-sn/update-set-cicd --body '<client-secret>'
-gh variable set SN_SDK_PROD_AUTH_TYPE --repo jon-lind-sn/update-set-cicd --body "oauth"
-```
-
-Set an instance's credentials before its `AUTH_TYPE` variable. Confirm with `gh variable list` and `gh secret list`.
-
-### 4. Create the approval environment
-
-1. In the repository, go to Settings > Environments > New environment and name it `production`.
-2. Check Required reviewers and add the people who approve promotions.
-3. Save. Jobs that use this environment pause until a reviewer approves.
-
-### 5. Confirm
-
-1. Run the credential check from step 2 once per instance. Both must print `{"ok":true`.
-2. Run `gh variable list --repo jon-lind-sn/update-set-cicd` and confirm `INSTANCE_URL` and `AUTH_TYPE` exist for TEST and PROD.
-3. Run `gh secret list --repo jon-lind-sn/update-set-cicd` and confirm the secrets for each instance's auth type exist.
+1. [How the pipeline works](docs/how-it-works.md), and the [workflow files](.github/workflows/README.md).
+2. [Community tutorial and video](https://sn.works/sdk/cicd) for configuring OAuth and running a PR through a pipeline.
+3. [ServiceNow SDK documentation](https://servicenow.github.io/sdk/), including [CI integration](https://servicenow.github.io/sdk/config/ci-integration) and [authentication for `now-sdk install`](https://servicenow.github.io/sdk/config/ci-integration#authentication-for-now-sdk-install).
+4. GitHub: [Actions](https://docs.github.com/en/actions), [workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions), [variables](https://docs.github.com/en/actions/learn-github-actions/variables), [secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions), and [environments and approvals](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment).
 
 ## License
 

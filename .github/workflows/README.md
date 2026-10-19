@@ -9,7 +9,7 @@ This repository holds two things, and each has its own workflows. Trigger workfl
 ## The sample app (`update-set-cicd-sample/`)
 
 1. [`sample-pr-validation.yml`](sample-pr-validation.yml) runs on every PR that changes the sample or the tool that processes it. It builds the app and generates the update set. It touches no instance. The generated XML is attached to the run as the `update-set` artifact.
-2. [`sample-deploy-main.yml`](sample-deploy-main.yml) is manual for now (`workflow_dispatch`). It runs these jobs in order:
+2. [`sample-deploy-main.yml`](sample-deploy-main.yml) runs on every merge to `main` that changes the sample or the tool, and can be started by hand (`workflow_dispatch`). It runs these jobs in order:
    1. `build` builds once and generates the update set.
    2. `deploy-test` imports, previews, and commits that update set on TEST.
    3. `approve-prod` pauses for a reviewer on the `production` environment.
@@ -26,4 +26,4 @@ Both sample trigger workflows run the tool from the checkout, so a PR is tested 
 ## Node version and credentials
 
 1. `.nvmrc` is the single source for the Node version. Workflows with a checkout read it with `node-version-file`. `_move-update-sets.yml` has no checkout and hardcodes the same version.
-2. Variable, secret, and environment names are listed in the "Set up GitHub and ServiceNow" section of the top-level README.
+2. Variable, secret, and environment names are listed in the "Set up the pipeline" section of the top-level README.
