@@ -21,7 +21,7 @@ The update set is built from the Fluent source in git when a PR merges. TEST rec
 1. A developer changes the sample app on a branch and bumps `version` in `update-set-cicd-sample/package.json`.
 2. A PR runs `Sample app: PR build and generate`. It builds the app and generates the update set. No instance is touched.
 3. A merge to `main` runs `Sample app: deploy TEST then PROD`. It builds once, then imports, previews, and commits the update set on TEST.
-4. A reviewer approves the `production` environment, then the update set moves from TEST to PROD.
+4. A reviewer approves the production deployment in GitHub, then the update set moves from TEST to PROD.
 
 See the [flow diagram](https://htmlpreview.github.io/?https://github.com/jon-lind-sn/update-set-cicd/blob/main/docs/developer-workflow.html), [how the pipeline works](docs/how-it-works.md), and the [workflow files](.github/workflows/README.md).
 
@@ -128,8 +128,8 @@ The pipeline uses two instances: TEST (update sets are committed here first) and
 6. Run a change through it:
    1. Create a branch, change the sample app (for example the message in `update-set-cicd-sample/src/server/fix-scripts/hello-update-set-cicd.js`), and bump `version` in `update-set-cicd-sample/package.json`.
    2. Open a PR. The `Sample app: PR build and generate` check builds the app and attaches the generated update set to the run.
-   3. Merge to `main`. `Sample app: deploy TEST then PROD` commits the update set on TEST, then waits at the `production` environment.
-   4. Approve the `production` environment in the Actions tab. The update set moves from TEST to PROD.
+   3. Merge to `main`. `Sample app: deploy TEST then PROD` commits the update set on TEST, then waits for approval of the production deployment.
+   4. Approve the production deployment in the Actions tab. The update set moves from TEST to PROD.
    5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
 The `CLI: unit tests` workflow runs `npm test` when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).

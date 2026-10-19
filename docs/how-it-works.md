@@ -8,7 +8,7 @@ A graphic version of this flow is in [developer-workflow.html](https://htmlprevi
 2. A pull request (PR) starts `Sample app: PR build and generate`. It installs dependencies, runs `now-sdk build --frozenKeys` (which fails if `keys.ts` is out of date), and runs `update-set-cicd generate` to produce the update set XML. The XML is uploaded as the `update-set` artifact. No instance is touched.
 3. A merge to `main` starts `Sample app: deploy TEST then PROD`. It builds once and uploads the artifact.
 4. `deploy-test` downloads the artifact and runs `update-set-cicd import --to-env TEST --commit`: upload, preview, commit.
-5. `deploy-prod` waits for a reviewer on the `production` environment, then runs `update-set-cicd move --from-env TEST --to-env PROD` on the update set TEST committed. PROD receives the same record a manual pull from TEST would copy.
+5. `deploy-prod` waits for a reviewer to approve the production deployment (the `production` environment), then runs `update-set-cicd move --from-env TEST --to-env PROD` on the update set TEST committed. PROD receives the same record a manual pull from TEST would copy.
 
 ## Update set identity
 
@@ -29,4 +29,4 @@ Every command takes credentials from `SN_SDK_<NAME>_*` variables (`--to-env PROD
 
 ## Several merges in a row
 
-Deploy runs share one queue (`concurrency`). A run waiting at the `production` approval holds the queue, and later merges wait behind it. GitHub keeps only the newest waiting run and cancels the rest. Each generated update set contains the whole sample app, so the newest version includes every earlier change. Approve or reject the older run first.
+Deploy runs share one queue (`concurrency`). A run waiting for production approval holds the queue, and later merges wait behind it. GitHub keeps only the newest waiting run and cancels the rest. Each generated update set contains the whole sample app, so the newest version includes every earlier change. Approve or reject the older run first.
