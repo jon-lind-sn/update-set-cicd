@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Interactive setup for this repo's CI/CD: sets the test/prod instance URLs,
 # picks basic or oauth per instance, prompts for the needed credentials, and
-# pushes all of it as GitHub repo variables/secrets via `gh`. See the "Set up GitHub and ServiceNow" section of README.md
+# pushes all of it as GitHub repo variables/secrets via `gh`. See the "Set up the pipeline" section of README.md
 # for the manual equivalent of everything this script does.
 set -euo pipefail
 
@@ -154,7 +154,7 @@ if [ "$TEST_AUTH" = "basic" ]; then
   TEST_PWD="$(ask_secret "  Password for $TEST_USER on $TEST_URL (leave blank to keep the existing secret)")"
   set_secret_if_provided SN_SDK_TEST_USER_PWD "$TEST_PWD"
 else
-  echo "  Get these from the OAuth Application Registry on $TEST_URL (see README.md 'Set up GitHub and ServiceNow' if you haven't created one yet). Leave blank to keep an existing secret."
+  echo "  Get these from the OAuth Application Registry on $TEST_URL (see README.md 'Set up the pipeline' if you haven't created one yet). Leave blank to keep an existing secret."
   echo "  Tip: validate a credential first — SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_AUTH_TYPE=oauth SN_SDK_INSTANCE_URL=$TEST_URL SN_SDK_OAUTH_CLIENT_ID=... SN_SDK_OAUTH_CLIENT_SECRET=... npx @servicenow/sdk query sys_user -q active=true --limit 1 -o json."
   TEST_CLIENT_ID="$(ask "  Client ID")"
   TEST_CLIENT_SECRET="$(ask_secret "  Client secret")"
@@ -171,7 +171,7 @@ if [ "$PROD_AUTH" = "basic" ]; then
   PROD_PWD="$(ask_secret "  Password for $PROD_USER on $PROD_URL (leave blank to keep the existing secret)")"
   set_secret_if_provided SN_SDK_PROD_USER_PWD "$PROD_PWD"
 else
-  echo "  Get these from the OAuth Application Registry on $PROD_URL (see README.md 'Set up GitHub and ServiceNow' if you haven't created one yet). Leave blank to keep an existing secret."
+  echo "  Get these from the OAuth Application Registry on $PROD_URL (see README.md 'Set up the pipeline' if you haven't created one yet). Leave blank to keep an existing secret."
   echo "  Tip: validate a credential first — SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_AUTH_TYPE=oauth SN_SDK_INSTANCE_URL=$PROD_URL SN_SDK_OAUTH_CLIENT_ID=... SN_SDK_OAUTH_CLIENT_SECRET=... npx @servicenow/sdk query sys_user -q active=true --limit 1 -o json."
   PROD_CLIENT_ID="$(ask "  Client ID")"
   PROD_CLIENT_SECRET="$(ask_secret "  Client secret")"
