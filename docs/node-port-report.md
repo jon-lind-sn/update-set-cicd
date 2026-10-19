@@ -116,3 +116,7 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 4. `scripts/integration.sh` with stages (unit, seed, move, assert, cleanup) that the workflow reuses. Seed with the `sn_cicd` update set `create` endpoint plus Table API fix script records named `UST-IT-<runid>`; no system properties, no instance changes. Verify whether `create` sets the new update set as current.
 5. Run the OAuth client credentials grant (open item 3 above) and Node 22.
 6. Push to `jon-lind-sn/update-set-cicd` (private) when Jon says so.
+
+## Decision (2026-10-19): Node 22
+
+1. Node 22 is the supported minimum and the version the GitHub Actions workflows run. Closed; no further version testing is planned beyond the unit test matrix (22 and 24).
