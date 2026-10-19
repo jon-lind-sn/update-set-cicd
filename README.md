@@ -38,11 +38,13 @@ Repeat for the TEST and PROD instances. Skip this section for an instance that u
 
 1. Create or choose a service user with the `admin` role. Set its Identity Type to `Human`; the installer rejects other identity types.
 2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` (type `true | false`). Create it in `sys_properties` if it is missing. Reference: [KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212).
-3. Create the OAuth client. Go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
-   1. Provider Name: any typed value, for example `Update Set CICD`.
-   2. OAuth application user: the service user from step 1.
-   3. Allow access only to APIs in selected scope: leave unchecked.
-   4. Skip the auth scope warning on save.
+3. Create the OAuth client. If you already created one named `SDK CI` on this instance for dev-passport-brazil, reuse it and skip to step 4; the same client ID and secret work for both repositories. Otherwise go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
+   1. Name: `SDK CI`.
+   2. Provider Name: `SDK CI Provider` (type it in manually).
+   3. OAuth application user: the service user from step 1.
+   4. Allow access only to APIs in selected scope: leave unchecked.
+   5. OpenID Connect (OIDC) provider: leave empty. OIDC providers do not issue tokens for the client credentials grant.
+   6. Save, and dismiss the "assign an auth scope" warning.
 4. Open the saved registry entry and copy the Client ID and Client Secret.
 
 ### 2. Check each credential before storing it
