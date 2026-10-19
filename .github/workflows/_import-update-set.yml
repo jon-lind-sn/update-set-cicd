@@ -2,7 +2,7 @@
 # instance (TEST or PROD), preview it, and commit it. Run `_sample-build.yml`
 # first so the artifact exists.
 #
-# Credentials use the same repository variables and secrets as dev-passport-brazil:
+# Credentials come from these repository variables and secrets:
 # SN_SDK_<NAME>_INSTANCE_URL, _AUTH_TYPE, _USER (variables) and _USER_PWD,
 # _OAUTH_CLIENT_ID, _OAUTH_CLIENT_SECRET (secrets), where <NAME> is TEST or PROD.
 name: Import update set (library)

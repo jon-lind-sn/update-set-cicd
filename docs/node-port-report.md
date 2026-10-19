@@ -58,7 +58,7 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 
 1. **Touch mode does not work.** Rewriting `sys_updated_on` (what Python option 1 did) and `sys_recorded_at` (11 hex digits of epoch milliseconds plus a counter) both left the problem in place. Untested guess: preview compares the timestamp inside each record's `payload`. Options: investigate further, or drop `touch` and keep `fail` and `force`.
 2. **Skills still call Python.** The installed plugin has no `node_modules`, so a skill needs a way to run the CLI (for example `npx --package ${CLAUDE_PLUGIN_ROOT} update-set-cicd ...`). Untested. Python scripts and README are unchanged.
-3. **Delivery from code.devsnc.com.** The remote is GitHub Enterprise, so `npx github:` does not apply; the equivalent is `npx --package git+https://code.devsnc.com/jon-lind/update-set-tools.git update-set-cicd ...`. Untested until pushed.
+3. **Delivery from a GitHub Enterprise remote.** `npx github:` does not apply there; the equivalent is `npx --package git+https://<host>/<owner>/<repo>.git update-set-cicd ...`. Superseded: the repository now lives on github.com.
 4. **Client credentials grant in CI.** Not tested (needs real OAuth client secrets). Plumbing is shared with test 13; the grant itself is now-sdk code.
 5. **Commit order for wildcards** (open decision 1): implemented as source `sys_created_on` ascending.
 6. **Retrieved-copy clutter.** Each touch attempt and `--as-new-version` run leaves a retrieved update set on the target. Consider cleanup or leaving it to the user.
@@ -81,15 +81,15 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 
 ## Open items for resume
 
-1. **Node version floor.** Test with Node 22 (not installed; Node 24.14.1 is, and dev-passport-brazil uses 24). If both the tool and now-sdk run clean, raise `engines.node` from 20.18. The Node 24 test run was not executed yet.
+1. **Node version floor.** Test with Node 22 (not installed; Node 24.14.1 is, and the sample pipeline uses 24). If both the tool and now-sdk run clean, raise `engines.node` from 20.18. The Node 24 test run was not executed yet.
 2. **Source-instance environment variables are new.** now-sdk reads one instance from `SN_SDK_*`. `move` needs a second instance in the same process, so any source variables (built as `SN_SDK_SOURCE_*`) are names now-sdk does not define. Goal: no extra IDs or secrets beyond the now-sdk CI configuration. Options to weigh:
-   1. Reuse the dev-passport-brazil repo variable and secret names directly: `move --from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*` (`INSTANCE_URL`, `AUTH_TYPE`, `USER`, `USER_PWD`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`) and maps each onto `SN_SDK_*` for its own now-sdk child. Same secrets as the existing workflows, no new names.
+   1. Use the repo variable and secret names of the existing sample pipeline: `move --from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*` (`INSTANCE_URL`, `AUTH_TYPE`, `USER`, `USER_PWD`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`) and maps each onto `SN_SDK_*` for its own now-sdk child. Same secrets as the existing workflows, no new names.
    2. Two steps, each with plain `SN_SDK_*`: `export` in a step configured for the source, `import --commit` in a step configured for the target. No new variables, but the XML must pass between steps as a file (conflicts with "ephemeral by default").
    3. Keep `SN_SDK_SOURCE_*` and document it.
 3. **OAuth client credentials testing.** Tested so far: OAuth aliases and pre-authenticated session variables (`SN_SDK_SESSION_BEARER_TOKEN`). Not tested: the client credentials grant (`SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL`, `SN_SDK_AUTH_TYPE=oauth`, client ID and secret). Claude must not see or type the secrets. Options:
    1. GitHub Actions in the new repo: client IDs and secrets as repo secrets for xare and yoyo, run `move` there. Tests the real scenario; secrets never enter a Claude session. Blocked on item 5 of Decisions (workflows later) unless a minimal smoke workflow is allowed.
    2. Local via macOS Keychain: Jon creates Keychain entries (`security add-generic-password`) for each client secret; a wrapper script reads them into `SN_SDK_*` only in the child process environment and runs the tool. Claude runs the wrapper and sees only tool output. Watch for: `-d/--debug` must never print environment values; shell tracing (`set -x`) off.
-   3. Prerequisites either way (from the dev-passport-brazil setup): `glide.oauth.inbound.client.credential.grant_type.enabled=true` (KB1645212), a service user with admin, an OAuth Client Credentials Grant inbound integration per instance.
+   3. Prerequisites either way (from the sample pipeline setup): `glide.oauth.inbound.client.credential.grant_type.enabled=true` (KB1645212), a service user with admin, an OAuth Client Credentials Grant inbound integration per instance.
 4. **Repo split steps.** Create the GitHub repo, move `bin/`, `src/`, `package.json`, `package-lock.json`, `docs/node-port-*.md`, add LICENSE (MIT) and README from the plan's sample docs, then remove the Node files from this worktree. Creating the public repo and pushing need Jon's go-ahead at that point.
 5. **Delivery.** `npx github:jon-lind-sn/update-set-cicd` once public; npmjs.org publishing optional later.
 
@@ -98,11 +98,11 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 1. Removed `--on-conflict touch`, `--as-new-version`, `touchTimestamps`, `asNewVersion`, and `nextVersionName` from the Node code (Decisions 2 and 3).
 2. Node 24.14.1 run: `list` and `move "UST-Test-*"` xare to yoyo pass with now-sdk 4.13.6. Four sets skipped as already committed; UST-Test-3 reported its expected "newer local update" problem (it was backed out earlier) with exit 1. Node 22 not installed; `engines.node` left at 20.18.
 3. Still open: item 2 (source variable names), item 3 (OAuth client credentials), item 4 (repo split, needs go-ahead).
-4. Decision (2026-10-16): `engines.node` is now `>=22`. Source variables use the dev-passport-brazil style: `move --from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`; `SN_SDK_SOURCE_*` is removed. `--from` or `--from-env` is now required. Smoke-tested with session variables mapped to `SN_SDK_TEST_*`/`SN_SDK_PROD_*` (xare to yoyo). Repo `jon-lind-sn/update-set-cicd` exists (private) and is the origin remote; goes public before GitHub Actions testing.
+4. Decision (2026-10-16): `engines.node` is now `>=22`. Source variables use the existing sample pipeline style: `move --from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`; `SN_SDK_SOURCE_*` is removed. `--from` or `--from-env` is now required. Smoke-tested with session variables mapped to `SN_SDK_TEST_*`/`SN_SDK_PROD_*` (xare to yoyo). Repo `jon-lind-sn/update-set-cicd` exists (private) and is the origin remote; goes public before GitHub Actions testing.
 
 ## Spike: app to update set (2026-10-16)
 
-1. `now-sdk build` output (`dist/app`) of dev-passport-brazil 0.0.21 converted with `update-set-gen/gen_update_set.py` (35 records, 2 DELETE actions already present) imported to yoyo, previewed clean, and committed. App version on yoyo is 0.0.21.
+1. `now-sdk build` output (`dist/app`) of a sample app (version 0.0.21) converted with `update-set-gen/gen_update_set.py` (35 records, 2 DELETE actions already present) imported to yoyo, previewed clean, and committed. App version on yoyo is 0.0.21.
 2. Generator bug: root `<application>` holds the scope name, platform needs the scope sys_id. Worked around with `sed`; note at `snconnect/docs/gen-update-set-scope-id-issue.md`.
 3. Re-importing a corrected file with unchanged ids reuses the earlier retrieved copy. A `--replace` option is a candidate.
 4. Poll default timeout is now 120000 ms (now-sdk uses 900000) and progress prints every 10 s with status. A job stuck at Pending adds a hint on timeout. A stalled yoyo scheduler caused a long wait earlier; it recovered by itself.

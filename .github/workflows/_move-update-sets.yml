@@ -1,5 +1,5 @@
 # Reusable workflow: move update sets from the TEST instance to the PROD instance.
-# Variable and secret names match dev-passport-brazil (see README.md, "Set up GitHub and ServiceNow").
+# Variable and secret names are listed in README.md ("Set up GitHub and ServiceNow").
 #
 #   jobs:
 #     promote:

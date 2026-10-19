@@ -30,7 +30,7 @@ node bin/update-set-cicd.js move --update-set-name "My-Project-*" --from <source
 
 ## Set up GitHub and ServiceNow
 
-The pipeline uses the same variable, secret, and environment names as the dev-passport-brazil pipeline, so one set of instance credentials works for both. The pipeline has two instances: TEST (update sets are committed here first) and PROD (update sets are promoted here after approval). Each instance authenticates with Open Authorization (OAuth) client credentials, which needs no interactive login, or with basic authentication.
+The pipeline has two instances: TEST (update sets are committed here first) and PROD (update sets are promoted here after approval). Each instance authenticates with Open Authorization (OAuth) client credentials, which needs no interactive login, or with basic authentication.
 
 ### 1. Prepare each ServiceNow instance (OAuth only)
 
@@ -38,7 +38,7 @@ Repeat for the TEST and PROD instances. Skip this section for an instance that u
 
 1. Create or choose a service user with the `admin` role. Set its Identity Type to `Human`; the installer rejects other identity types.
 2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` (type `true | false`). Create it in `sys_properties` if it is missing. Reference: [KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212).
-3. Create the OAuth client. If you already created one named `SDK CI` on this instance for dev-passport-brazil, reuse it and skip to step 4; the same client ID and secret work for both repositories. Otherwise go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
+3. Create the OAuth client. Go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
    1. Name: `SDK CI`.
    2. Provider Name: `SDK CI Provider` (type it in manually).
    3. OAuth application user: the service user from step 1.

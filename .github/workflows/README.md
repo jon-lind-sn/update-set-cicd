@@ -1,6 +1,6 @@
 # Workflows
 
-This repository holds two things, and each has its own workflows. The layout follows dev-passport-brazil: trigger workflows have plain names, and library workflows (`workflow_call`, never triggered on their own) start with an underscore.
+This repository holds two things, and each has its own workflows. Trigger workflows have plain names, and library workflows (`workflow_call`, never triggered on their own) start with an underscore.
 
 ## The module (`bin/`, `src/`, `test/`)
 
