@@ -1,7 +1,7 @@
 # Reusable workflow (workflow_call): build the sample Fluent app and generate the
 # update set. Touches no instance and uses no secrets. The generated XML is
 # uploaded as the `update-set` artifact so every later job deploys the same file.
-name: Sample app: build (reusable)
+name: "Sample app: build (reusable)"
 
 on:
   workflow_call:
