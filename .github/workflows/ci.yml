@@ -1,7 +1,7 @@
 # CI for the update-set-cicd CLI itself (bin/ and src/).
 # Runs unit tests only: no instances, no secrets. The sample Fluent app in
 # update-set-cicd-sample/ has its own workflows (see README.md in this folder).
-name: CLI: unit tests
+name: "CLI: unit tests"
 
 on:
   pull_request:

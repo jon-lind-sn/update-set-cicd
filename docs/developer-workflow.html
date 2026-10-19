@@ -119,19 +119,19 @@
     <li class="step gate">
       <div class="num">7</div>
       <div class="card">
-        <h2>Approve for production</h2>
-        <div class="who">Human approver, in GitHub</div>
-        <p>The PROD environment requires a named reviewer. The pipeline pauses until they click Approve.</p>
+        <h2>Start the PROD promotion and approve it</h2>
+        <div class="who">Human, in GitHub</div>
+        <p>When the version is ready, start <code>Sample app: promote to PROD</code> by hand with the update set name. The PROD environment requires a named reviewer, and the job pauses until they click Approve. Merges are never blocked while it waits.</p>
       </div>
     </li>
 
     <li class="step sn">
       <div class="num">8</div>
       <div class="card">
-        <h2>Commit on PROD</h2>
+        <h2>Move to PROD</h2>
         <div class="who">GitHub Actions to the PROD instance</div>
-        <p>The same update set is uploaded, previewed, and committed on production.</p>
-        <div class="tools"><span class="tool">update-set-cicd import</span></div>
+        <p>The update set TEST committed is copied to production, previewed, and committed, the same as a manual pull from TEST.</p>
+        <div class="tools"><span class="tool">update-set-cicd move</span></div>
         <div class="out"><b>Result:</b> the change is live. The run log records who approved and what was committed.</div>
       </div>
     </li>

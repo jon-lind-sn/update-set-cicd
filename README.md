@@ -66,8 +66,9 @@ The pipeline has two instances: TEST (update sets are committed here first) and 
 
 1. Create a branch, change the sample app, and bump `version` in `update-set-cicd-sample/package.json`. Each version is a new update set.
 2. Open a pull request (PR). The `Sample app: PR build and generate` check builds the app and generates the update set, and attaches it to the run. It touches no instance.
-3. Merge to `main`. `Sample app: deploy TEST then PROD` builds once and commits the update set on TEST, waits for a reviewer to approve the `production` environment, then moves the committed update set from TEST to PROD. You can also start it by hand from the Actions tab.
-4. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
+3. Merge to `main`. `Sample app: deploy to TEST` builds once and commits the update set on TEST. It also prints the update set name in the run summary. You can start it by hand from the Actions tab.
+4. When the version is ready for production, start `Sample app: promote to PROD` from the Actions tab and enter that update set name. A reviewer approves the `production` environment, then the committed update set moves from TEST to PROD. Skipped versions never reach PROD, and merges are never blocked by a pending promotion.
+5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
 The `CLI: unit tests` workflow runs the unit tests (`npm test`) when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 
