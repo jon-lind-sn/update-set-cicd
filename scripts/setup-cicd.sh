@@ -51,6 +51,32 @@ ask_secret() {
   echo "$reply"
 }
 
+# Accepts an instance name (acme), a host (acme.service-now.com), or a URL
+# (https://acme.service-now.com/) and returns https://<host>: lowercase, no
+# path, no trailing slash. A bare name gets ".service-now.com" appended.
+normalize_instance_url() {
+  local v scheme host
+  v="$(printf '%s' "$1" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+  case "$v" in
+    http://*|https://*) ;;
+    *) v="https://$v" ;;
+  esac
+  scheme="${v%%://*}"
+  host="${v#*://}"
+  host="${host%%[/?#]*}"
+  case "$host" in
+    *.*|localhost*) ;;
+    *) host="$host.service-now.com" ;;
+  esac
+  printf '%s://%s' "$scheme" "$host"
+}
+
+ask_instance() {
+  local reply
+  reply="$(ask_required "$1" "$2")"
+  normalize_instance_url "$reply"
+}
+
 ask_auth_type() {
   local label="$1" default="$2" reply
   while true; do
@@ -112,17 +138,17 @@ CURRENT_TEST_USER="$(gh variable get SN_SDK_TEST_USER --repo "$REPO_SLUG" 2>/dev
 CURRENT_PROD_USER="$(gh variable get SN_SDK_PROD_USER --repo "$REPO_SLUG" 2>/dev/null || true)"
 
 echo "Configuring CI/CD auth for $REPO_SLUG"
-echo "Test = the instance update sets are committed to first. Prod = the instance they are promoted to after approval."
-echo "New here and just want it running? basic auth for both test and prod is the least setup (no ServiceNow OAuth app registry needed)."
+echo "TEST = the instance update sets are committed to first. PROD = the instance they are promoted to after approval."
+echo "New here and just want it running? basic auth for both TEST and PROD is the least setup (no ServiceNow OAuth app registry needed)."
 echo
 echo "Press Enter on any prompt to keep its current/default value shown in [brackets]."
 
 # Everything for one instance lives together under its own header, in the
 # order you're actually asked for it: auth type, then URL, then credentials.
 echo
-echo "== Configure Test instance =="
+echo "== Configure TEST Instance =="
 [ -n "$TEST_AUTH" ] || TEST_AUTH="$(ask_auth_type "  Auth type" "${CURRENT_TEST_AUTH:-basic}")"
-TEST_URL="$(ask_required "  Instance URL" "$CURRENT_TEST_URL")"
+TEST_URL="$(ask_instance "  Instance name or URL" "$CURRENT_TEST_URL")"
 if [ "$TEST_AUTH" = "basic" ]; then
   TEST_USER="$(ask_required "  Basic-auth username on $TEST_URL" "$CURRENT_TEST_USER")"
   TEST_PWD="$(ask_secret "  Password for $TEST_USER on $TEST_URL (leave blank to keep the existing secret)")"
@@ -137,9 +163,9 @@ else
 fi
 
 echo
-echo "== Configure Prod instance =="
+echo "== Configure PROD Instance =="
 [ -n "$PROD_AUTH" ] || PROD_AUTH="$(ask_auth_type "  Auth type" "${CURRENT_PROD_AUTH:-basic}")"
-PROD_URL="$(ask_required "  Instance URL" "$CURRENT_PROD_URL")"
+PROD_URL="$(ask_instance "  Instance name or URL" "$CURRENT_PROD_URL")"
 if [ "$PROD_AUTH" = "basic" ]; then
   PROD_USER="$(ask_required "  Basic-auth username on $PROD_URL" "$CURRENT_PROD_USER")"
   PROD_PWD="$(ask_secret "  Password for $PROD_USER on $PROD_URL (leave blank to keep the existing secret)")"
@@ -163,5 +189,5 @@ set_variable_if_changed SN_SDK_PROD_AUTH_TYPE "$PROD_AUTH"
 [ "$PROD_AUTH" = "basic" ] && set_variable_if_changed SN_SDK_PROD_USER "$PROD_USER"
 
 echo
-echo "Done. Test = $TEST_AUTH ($TEST_URL), Prod = $PROD_AUTH ($PROD_URL)."
+echo "Done. TEST = $TEST_AUTH ($TEST_URL), PROD = $PROD_AUTH ($PROD_URL)."
 echo "Run 'gh variable list --repo $REPO_SLUG' / 'gh secret list --repo $REPO_SLUG' to confirm what was set."
