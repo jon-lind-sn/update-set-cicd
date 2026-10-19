@@ -110,7 +110,8 @@ export async function move(log, args) {
 }
 
 export async function importCmd(log, args) {
-    const tgt = await open(log, args, { alias: args.auth })
+    if (args.auth && args.toEnv) throw new Error('Use either --auth or --to-env, not both')
+    const tgt = await open(log, args, args.toEnv ? instanceRef(undefined, args.toEnv, '--to') : { alias: args.auth })
     const items = []
     for (const file of args.files) {
         const raw = await readFile(file, 'utf8')

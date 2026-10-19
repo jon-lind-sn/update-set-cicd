@@ -3,7 +3,7 @@
 #
 #   jobs:
 #     promote:
-#       uses: jon-lind-sn/update-set-cicd/.github/workflows/move-update-sets.yml@main
+#       uses: jon-lind-sn/update-set-cicd/.github/workflows/_move-update-sets.yml@main
 #       with: { pattern: "My-Project-*" }
 #       secrets: inherit
 #

@@ -83,6 +83,7 @@ yargs(hideBin(process.argv))
     .command('import <files..>', 'Load local XML files, preview, and optionally commit', (y) =>
         shared(waitOpts(conflict(auth(y))))
             .positional('files', { type: 'string', describe: 'Update set XML file(s), committed in the order given' })
+            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL), instead of --auth' })
             .option('commit', { type: 'boolean', default: false, describe: 'Commit after a clean preview' }),
         run(cmd.importCmd))
     .demandCommand(1)

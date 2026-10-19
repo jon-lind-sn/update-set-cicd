@@ -1,0 +1,67 @@
+# Library workflow (workflow_call): import the `update-set` artifact into one
+# instance (TEST or PROD), preview it, and commit it. Run `_sample-build.yml`
+# first so the artifact exists.
+#
+# Credentials use the same repository variables and secrets as dev-passport-brazil:
+# SN_SDK_<NAME>_INSTANCE_URL, _AUTH_TYPE, _USER (variables) and _USER_PWD,
+# _OAUTH_CLIENT_ID, _OAUTH_CLIENT_SECRET (secrets), where <NAME> is TEST or PROD.
+name: Import update set (library)
+
+on:
+  workflow_call:
+    inputs:
+      instance:
+        description: Target instance name, TEST or PROD
+        type: string
+        required: true
+      on-conflict:
+        description: fail or force
+        type: string
+        default: fail
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    env:
+      SN_SDK_NODE_ENV: SN_SDK_CI_INSTALL
+      SN_SDK_TEST_INSTANCE_URL: ${{ vars.SN_SDK_TEST_INSTANCE_URL }}
+      SN_SDK_TEST_AUTH_TYPE: ${{ vars.SN_SDK_TEST_AUTH_TYPE }}
+      SN_SDK_TEST_USER: ${{ vars.SN_SDK_TEST_USER }}
+      SN_SDK_TEST_USER_PWD: ${{ secrets.SN_SDK_TEST_USER_PWD }}
+      SN_SDK_TEST_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_ID }}
+      SN_SDK_TEST_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_SECRET }}
+      SN_SDK_PROD_INSTANCE_URL: ${{ vars.SN_SDK_PROD_INSTANCE_URL }}
+      SN_SDK_PROD_AUTH_TYPE: ${{ vars.SN_SDK_PROD_AUTH_TYPE }}
+      SN_SDK_PROD_USER: ${{ vars.SN_SDK_PROD_USER }}
+      SN_SDK_PROD_USER_PWD: ${{ secrets.SN_SDK_PROD_USER_PWD }}
+      SN_SDK_PROD_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_ID }}
+      SN_SDK_PROD_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download update set
+        uses: actions/download-artifact@v4
+        with:
+          name: update-set
+          path: update-set
+
+      - name: Import, preview, and commit on ${{ inputs.instance }}
+        env:
+          INSTANCE: ${{ inputs.instance }}
+          ON_CONFLICT: ${{ inputs.on-conflict }}
+        run: >
+          node bin/update-set-cicd.js import update-set/*.xml
+          --to-env "$INSTANCE" --commit --on-conflict "$ON_CONFLICT" -o json

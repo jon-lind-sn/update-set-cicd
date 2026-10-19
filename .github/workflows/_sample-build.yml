@@ -1,0 +1,47 @@
+# Library workflow (workflow_call): build the sample Fluent app and generate the
+# update set. Touches no instance and uses no secrets. The generated XML is
+# uploaded as the `update-set` artifact so every later job deploys the same file.
+name: Sample build (library)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            update-set-cicd-sample/package-lock.json
+
+      - name: Install update-set-cicd dependencies
+        run: npm ci
+
+      - name: Install sample dependencies
+        run: npm ci
+        working-directory: update-set-cicd-sample
+
+      - name: Verify keys.ts is up to date
+        run: npx @servicenow/sdk build --frozenKeys
+        working-directory: update-set-cicd-sample
+
+      - name: Generate update set
+        run: node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir update-set
+
+      - name: Upload update set
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-set
+          path: update-set/*.xml
+          if-no-files-found: error

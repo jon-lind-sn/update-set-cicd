@@ -1,0 +1,51 @@
+# Sample app: build once, commit on TEST, wait for approval, commit the same
+# update set on PROD. Manual-only for now; to run on every merge to main, add
+#   push:
+#     branches: [main]
+#     paths: [ ...same paths as sample-pr-validation.yml... ]
+# under `on:`.
+name: Sample deploy to Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      on-conflict:
+        description: fail or force (for preview problems)
+        type: choice
+        options: [fail, force]
+        default: fail
+
+concurrency:
+  group: sample-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/_sample-build.yml
+
+  deploy-test:
+    needs: build
+    uses: ./.github/workflows/_import-update-set.yml
+    with:
+      instance: TEST
+      on-conflict: ${{ inputs.on-conflict }}
+    secrets: inherit
+
+  approve-prod:
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Manual approval gate
+        run: echo "Approved for production"
+
+  deploy-prod:
+    needs: approve-prod
+    uses: ./.github/workflows/_import-update-set.yml
+    with:
+      instance: PROD
+      on-conflict: ${{ inputs.on-conflict }}
+    secrets: inherit
