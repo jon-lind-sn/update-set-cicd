@@ -1,7 +1,7 @@
-# Sample app: runs on pull requests that change the sample or the tool that
+# Sample app: runs on pull requests that change the sample or the CLI that
 # processes it. Builds the app and generates the update set; touches no instance.
 # The generated XML is attached to the run as the `update-set` artifact.
-name: Sample PR validation
+name: "Sample app: PR build and generate"
 
 on:
   pull_request:

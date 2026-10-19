@@ -1,7 +1,7 @@
 # Sample app: build once, commit on TEST, wait for approval, move the committed
 # update set from TEST to PROD. Runs on every merge to main that changes the sample or the
-# tool that processes it, and can be started by hand.
-name: Sample deploy to Prod
+# CLI that processes it, and can be started by hand.
+name: "Sample app: deploy TEST then PROD"
 
 on:
   push:

@@ -2,11 +2,11 @@
 
 Move ServiceNow update sets between instances from a laptop or from a continuous integration and continuous delivery (CI/CD) pipeline, using the credentials and conventions of the [ServiceNow SDK](https://www.npmjs.com/package/@servicenow/sdk). It can also build an update set from a Now SDK (Fluent) app, so an SDK app can be promoted TEST to PROD with update sets instead of the Application Repository.
 
-This repository holds the command line tool and a sample Fluent app (`update-set-cicd-sample/`) with a working GitHub Actions pipeline.
+This repository holds the CLI and a sample app (a Now SDK Fluent app) (`update-set-cicd-sample/`) with a working GitHub Actions pipeline.
 
 > **Caution:** the pipeline writes to your instances without a human in the loop, except for the approval gate before PROD. Start with sub-production instances and keep secrets out of version control.
 
-## Use the tool
+## Use the CLI
 
 Requires Node.js 22 (`nvm use` picks it up from `.nvmrc`).
 
@@ -65,11 +65,11 @@ The pipeline has two instances: TEST (update sets are committed here first) and 
 ## Run it
 
 1. Create a branch, change the sample app, and bump `version` in `update-set-cicd-sample/package.json`. Each version is a new update set.
-2. Open a pull request (PR). The `Sample PR validation` check builds the app and generates the update set, and attaches it to the run. It touches no instance.
-3. Merge to `main`. `Sample deploy to Prod` builds once, commits the update set on TEST, waits for a reviewer to approve the `production` environment, then commits the same file on PROD. You can also start it by hand from the Actions tab.
+2. Open a pull request (PR). The `Sample app: PR build and generate` check builds the app and generates the update set, and attaches it to the run. It touches no instance.
+3. Merge to `main`. `Sample app: deploy TEST then PROD` builds once and commits the update set on TEST, waits for a reviewer to approve the `production` environment, then moves the committed update set from TEST to PROD. You can also start it by hand from the Actions tab.
 4. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
-The `CI (module)` workflow runs the unit tests (`npm test`) when the tool itself changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
+The `CLI: unit tests` workflow runs the unit tests (`npm test`) when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 
 ## Learn more
 
