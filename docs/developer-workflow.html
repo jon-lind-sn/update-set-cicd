@@ -5,148 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Update Set CI/CD Developer Workflow</title>
 <style>
-  :root {
-    --bg: #f6f7f9; --card: #ffffff; --text: #1d2430; --muted: #5d6879; --line: #d5dae2;
-    --dev: #2f6fed; --gh: #6b46c1; --sn: #0f9d6e; --gate: #d98a00; --tool: #eef1f6;
-  }
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2430; --muted:#5d6879; --line:#d5dae2;
+          --dev:#2f6fed; --gh:#6b46c1; --sn:#0f9d6e; --gate:#d98a00; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #14171c; --card: #1d222a; --text: #e8ebf0; --muted: #9aa5b5; --line: #343c48; --tool: #2a313c; }
+    :root { --bg:#14171c; --card:#1d222a; --text:#e8ebf0; --muted:#9aa5b5; --line:#343c48; }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 32px 16px 64px; background: var(--bg); color: var(--text);
-         font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 920px; margin: 0 auto; }
-  h1 { font-size: 26px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 28px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 24px; font-size: 14px; color: var(--muted); }
-  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px;
-                         margin-right: 6px; vertical-align: -1px; background: var(--c); }
-  .steps { list-style: none; margin: 0; padding: 0; position: relative; }
-  .steps::before { content: ""; position: absolute; left: 21px; top: 10px; bottom: 10px; width: 3px; background: var(--line); }
-  .step { position: relative; padding-left: 62px; margin-bottom: 18px; }
-  .num { position: absolute; left: 0; top: 4px; width: 44px; height: 44px; border-radius: 50%;
-         background: var(--c); color: #fff; font-weight: 700; font-size: 18px; display: grid; place-items: center;
-         border: 4px solid var(--bg); }
-  .card { background: var(--card); border: 1px solid var(--line); border-left: 6px solid var(--c);
-          border-radius: 10px; padding: 14px 18px; }
-  .card h2 { font-size: 18px; margin: 0 0 2px; }
-  .who { font-size: 13px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
-  .card p { margin: 0 0 8px; }
-  .tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .tool { background: var(--tool); border-radius: 999px; padding: 2px 10px; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
-  .out { font-size: 14px; color: var(--muted); }
-  .out b { color: var(--text); }
-  .dev { --c: var(--dev); } .gh { --c: var(--gh); } .sn { --c: var(--sn); } .gate { --c: var(--gate); }
-  .fail { margin-top: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
-  .fail h2 { font-size: 18px; margin: 0 0 6px; }
-  .fail ol { margin: 0; padding-left: 20px; }
-  .note { margin-top: 20px; font-size: 14px; color: var(--muted); }
+  body { margin:0; padding:28px 16px 56px; background:var(--bg); color:var(--text);
+         font:15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 18px; margin-bottom:20px; font-size:13px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:12px; height:12px; border-radius:3px;
+                         margin-right:6px; vertical-align:-1px; background:var(--c); }
+  .lane { margin:0 0 6px; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+  .row { display:grid; grid-template-columns:1fr 28px 1fr 28px 1fr; align-items:stretch; margin-bottom:20px; }
+  .box { background:var(--card); border:1px solid var(--line); border-top:5px solid var(--c);
+         border-radius:10px; padding:10px 12px; }
+  .box h2 { margin:0 0 4px; font-size:15px; }
+  .box p { margin:0; font-size:13px; color:var(--muted); }
+  .ar { display:grid; place-items:center; color:var(--muted); font-size:20px; }
+  code { font:12px ui-monospace, Menlo, monospace; background:rgba(127,127,127,.15); padding:1px 5px; border-radius:4px; }
+  .note { margin-top:4px; font-size:13px; color:var(--muted); }
+  .dev { --c:var(--dev); } .gh { --c:var(--gh); } .sn { --c:var(--sn); } .gate { --c:var(--gate); }
+  @media (max-width:700px) { .row { grid-template-columns:1fr; } .ar { transform:rotate(90deg); height:24px; } .ar.none { display:none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Update Set CI/CD: the developer workflow</h1>
-  <p class="sub">What happens from the first code change to a committed update set in production. Continuous integration and delivery (CI/CD) runs in GitHub Actions, so the developer writes code, merges a pull request, and starts the production promotion.</p>
+  <p class="sub">From a code change to a committed update set in production. GitHub Actions does the work between your steps.</p>
 
   <div class="legend">
     <span style="--c:var(--dev)">Developer</span>
-    <span style="--c:var(--gh)">GitHub Actions (automatic)</span>
+    <span style="--c:var(--gh)">GitHub Actions</span>
     <span style="--c:var(--sn)">ServiceNow instance</span>
     <span style="--c:var(--gate)">Human approval</span>
   </div>
 
-  <ol class="steps">
-    <li class="step dev">
-      <div class="num">1</div>
-      <div class="card">
-        <h2>Write the change</h2>
-        <div class="who">Developer, on a feature branch</div>
-        <p>Edit the Fluent app (tables, business rules, fix scripts) in code. Build and try it on a personal dev instance if desired.</p>
-        <div class="tools"><span class="tool">now-sdk build</span><span class="tool">now-sdk install</span></div>
-      </div>
-    </li>
-
-    <li class="step dev">
-      <div class="num">2</div>
-      <div class="card">
-        <h2>Open a pull request (PR)</h2>
-        <div class="who">Developer</div>
-        <p>Push the branch and open a PR into <code>main</code>. This starts the automatic checks.</p>
-      </div>
-    </li>
-
-    <li class="step gh">
-      <div class="num">3</div>
-      <div class="card">
-        <h2>Checks run on the PR</h2>
-        <div class="who">GitHub Actions, no instance changes</div>
-        <p>The app is built and packaged into an update set file to prove it is valid. Nothing touches any instance yet.</p>
-        <div class="tools"><span class="tool">npm ci</span><span class="tool">now-sdk build</span><span class="tool">update-set-cicd generate</span></div>
-        <div class="out"><b>Result:</b> green check or red X on the PR, with the update set XML attached as a download.</div>
-      </div>
-    </li>
-
-    <li class="step dev">
-      <div class="num">4</div>
-      <div class="card">
-        <h2>Review and merge</h2>
-        <div class="who">Developer and reviewer</div>
-        <p>A teammate reviews the code and the green checks, then merges the PR into <code>main</code>.</p>
-      </div>
-    </li>
-
-    <li class="step gh">
-      <div class="num">5</div>
-      <div class="card">
-        <h2>Generate the release update set</h2>
-        <div class="who">GitHub Actions, on merge to main</div>
-        <p>The build runs on the merged code and <code>generate</code> creates the update set from it. This is where the update set is born: no instance has it yet, and git holds the source of truth. The file is built once.</p>
-        <div class="tools"><span class="tool">now-sdk build</span><span class="tool">update-set-cicd generate</span></div>
-      </div>
-    </li>
-
-    <li class="step sn">
-      <div class="num">6</div>
-      <div class="card">
-        <h2>Deploy to TEST</h2>
-        <div class="who">GitHub Actions to the TEST instance</div>
-        <p>The generated file is imported to TEST: uploaded, previewed, and committed. The run summary prints the update set name. If the preview finds a problem (for example a conflicting newer change), the run stops here and nothing is committed.</p>
-        <div class="tools"><span class="tool">update-set-cicd import</span></div>
-        <div class="out"><b>Result:</b> the change is live on TEST for testing.</div>
-      </div>
-    </li>
-
-    <li class="step gate">
-      <div class="num">7</div>
-      <div class="card">
-        <h2>Start the PROD promotion and approve it</h2>
-        <div class="who">Human, in GitHub</div>
-        <p>When the version is ready, start <code>Sample app: promote to PROD</code> by hand with the update set name. The PROD environment requires a named reviewer, and the job pauses until they click Approve. Merges are never blocked while it waits.</p>
-      </div>
-    </li>
-
-    <li class="step sn">
-      <div class="num">8</div>
-      <div class="card">
-        <h2>Move to PROD</h2>
-        <div class="who">GitHub Actions to the PROD instance</div>
-        <p>The update set TEST committed is copied to production, previewed, and committed, the same as a manual pull from TEST.</p>
-        <div class="tools"><span class="tool">update-set-cicd move</span></div>
-        <div class="out"><b>Result:</b> the change is live. The run log records who approved and what was committed.</div>
-      </div>
-    </li>
-  </ol>
-
-  <div class="fail">
-    <h2>If something fails</h2>
-    <ol>
-      <li>Failure in step 3: the PR shows a red X. Fix the code, push again, and the checks re-run.</li>
-      <li>Failure in step 6 (TEST preview problem): the run stops, nothing is committed, and the log lists each problem with a link to the retrieved update set on the instance.</li>
-      <li>Rejection in step 7: nothing reaches production.</li>
-    </ol>
+  <div class="lane">1. Author</div>
+  <div class="row">
+    <div class="box dev"><h2>Change the app</h2><p>Edit the Fluent app. Bump <code>version</code>.</p></div>
+    <div class="ar">→</div>
+    <div class="box dev"><h2>Open a pull request (PR)</h2><p>Teammate reviews.</p></div>
+    <div class="ar">→</div>
+    <div class="box gh"><h2>PR checks</h2><p>Build and <code>generate</code>. No instance touched.</p></div>
   </div>
 
-  <p class="note">TEST receives the update set by import because nothing earlier holds it. PROD receives it by <code>move</code> from TEST, which creates the same record a manual update set pull from TEST creates. Each merge deploys to TEST only, so a pending PROD approval never blocks later merges.</p>
+  <div class="lane">2. Deploy to TEST (on merge to main)</div>
+  <div class="row">
+    <div class="box gh"><h2>Generate update set</h2><p>Built from source in git. This is where it is born.</p></div>
+    <div class="ar">→</div>
+    <div class="box sn"><h2>Import to TEST</h2><p>Upload, preview, commit with <code>import</code>.</p></div>
+    <div class="ar none"></div>
+    <div></div>
+  </div>
+
+  <div class="lane">3. Promote to PROD (run by hand)</div>
+  <div class="row">
+    <div class="box dev"><h2>Start promotion</h2><p>Enter the update set name.</p></div>
+    <div class="ar">→</div>
+    <div class="box gate"><h2>Approve</h2><p>Reviewer approves <code>production</code>.</p></div>
+    <div class="ar">→</div>
+    <div class="box sn"><h2>Move to PROD</h2><p><code>move</code> from TEST. Same record as a manual pull.</p></div>
+  </div>
+
+  <p class="note">A failed preview stops the run and commits nothing. Rejecting the approval keeps the change out of PROD. Merges never wait on a promotion.</p>
 </div>
 </body>
 </html>
