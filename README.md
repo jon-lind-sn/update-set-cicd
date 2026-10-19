@@ -5,7 +5,7 @@ Move ServiceNow update sets between instances from a laptop or from a continuous
 This repository holds two things:
 
 1. The CLI (`bin/`, `src/`). It is tested and never deployed to an instance.
-2. A sample app (`update-set-cicd-sample/`), a small Fluent app, with GitHub Actions workflows that build it, deploy it to TEST on every merge, and promote it to PROD after a reviewer approves.
+2. A sample app (`update-set-cicd-sample/`), a small Fluent app, with GitHub Actions workflows that build it, deploy it to TEST on every merge, and move it to PROD after a reviewer approves.
 
 > **Caution:** the CLI and the pipeline write to your instances. Start with sub-production instances and keep secrets out of version control.
 
@@ -20,8 +20,8 @@ The update set is built from the Fluent source in git when a PR merges. TEST rec
 
 1. A developer changes the sample app on a branch and bumps `version` in `update-set-cicd-sample/package.json`.
 2. A PR runs `Sample app: PR build and generate`. It builds the app and generates the update set. No instance is touched.
-3. A merge to `main` runs `Sample app: deploy to TEST`. It builds once, then imports, previews, and commits the update set on TEST. The update set name appears in the run summary.
-4. When the version is ready for production, someone runs `Sample app: promote to PROD` from the Actions tab and enters that name. A reviewer approves the `production` environment, then the update set moves from TEST to PROD.
+3. A merge to `main` runs `Sample app: deploy TEST then PROD`. It builds once, then imports, previews, and commits the update set on TEST.
+4. A reviewer approves the `production` environment, then the update set moves from TEST to PROD.
 
 See the [flow diagram](https://htmlpreview.github.io/?https://github.com/jon-lind-sn/update-set-cicd/blob/main/docs/developer-workflow.html), [how the pipeline works](docs/how-it-works.md), and the [workflow files](.github/workflows/README.md).
 
@@ -128,8 +128,8 @@ The pipeline uses two instances: TEST (update sets are committed here first) and
 6. Run a change through it:
    1. Create a branch, change the sample app (for example the message in `update-set-cicd-sample/src/server/fix-scripts/hello-update-set-cicd.js`), and bump `version` in `update-set-cicd-sample/package.json`.
    2. Open a PR. The `Sample app: PR build and generate` check builds the app and attaches the generated update set to the run.
-   3. Merge to `main`. `Sample app: deploy to TEST` commits the update set on TEST. Open the run summary to copy the update set name, for example `Update Set Deploy CICD Sample v0.0.4`.
-   4. In the Actions tab run `Sample app: promote to PROD`, paste the name, and approve the `production` environment. The update set moves from TEST to PROD.
+   3. Merge to `main`. `Sample app: deploy TEST then PROD` commits the update set on TEST, then waits at the `production` environment.
+   4. Approve the `production` environment in the Actions tab. The update set moves from TEST to PROD.
    5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
 The `CLI: unit tests` workflow runs `npm test` when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).

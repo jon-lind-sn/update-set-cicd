@@ -62,16 +62,16 @@
     <div></div>
   </div>
 
-  <div class="lane">3. Promote to PROD (run by hand)</div>
+  <div class="lane">3. Promote to PROD (after approval)</div>
   <div class="row">
-    <div class="box dev"><h2>Start promotion</h2><p>When ready to deploy, open the Actions tab, choose <code>Sample app: promote to PROD</code>, click Run workflow, and enter the update set name shown in the TEST run summary.</p></div>
-    <div class="ar">→</div>
     <div class="box gate"><h2>Approve</h2><p>A reviewer approves the <code>production</code> environment in GitHub.</p></div>
     <div class="ar">→</div>
     <div class="box sn"><h2>Move to PROD</h2><p><code>move</code> copies the update set TEST committed, so PROD gets the same record as a manual pull from TEST.</p></div>
+    <div class="ar none"></div>
+    <div></div>
   </div>
 
-  <p class="note">Rejecting the approval keeps the change out of PROD. Merges never wait on a promotion.</p>
+  <p class="note">Rejecting the approval keeps the change out of PROD.</p>
 </div>
 </body>
 </html>
