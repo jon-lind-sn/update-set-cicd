@@ -46,32 +46,32 @@
 
   <div class="lane">1. Author</div>
   <div class="row">
-    <div class="box dev"><h2>Change the app</h2><p>Edit the Fluent app. Bump <code>version</code>.</p></div>
+    <div class="box dev"><h2>Change the app</h2><p>Edit the Fluent app and bump <code>version</code> in <code>package.json</code>. Each version is a new update set.</p></div>
     <div class="ar">→</div>
-    <div class="box dev"><h2>Open a pull request (PR)</h2><p>Teammate reviews.</p></div>
+    <div class="box dev"><h2>Open a pull request (PR)</h2><p>A teammate reviews the code and the PR checks.</p></div>
     <div class="ar">→</div>
-    <div class="box gh"><h2>PR checks</h2><p>Build and <code>generate</code>. No instance touched.</p></div>
+    <div class="box gh"><h2>PR checks</h2><p>A dry run. <code>now-sdk build</code> and <code>generate</code> prove the update set can be built. Nothing is deployed.</p></div>
   </div>
 
   <div class="lane">2. Deploy to TEST (on merge to main)</div>
   <div class="row">
-    <div class="box gh"><h2>Generate update set</h2><p>Built from source in git. This is where it is born.</p></div>
+    <div class="box gh"><h2>Generate update set</h2><p>GitHub Actions builds the Fluent source with <code>now-sdk build</code>, then <code>generate</code> creates the update set file.</p></div>
     <div class="ar">→</div>
-    <div class="box sn"><h2>Import to TEST</h2><p>Upload, preview, commit with <code>import</code>.</p></div>
+    <div class="box sn"><h2>Import to TEST</h2><p><code>import</code> uploads the file, previews it, and commits it on TEST. A preview problem stops the run and commits nothing.</p></div>
     <div class="ar none"></div>
     <div></div>
   </div>
 
   <div class="lane">3. Promote to PROD (run by hand)</div>
   <div class="row">
-    <div class="box dev"><h2>Start promotion</h2><p>Enter the update set name.</p></div>
+    <div class="box dev"><h2>Start promotion</h2><p>Run the promotion workflow and enter the update set name from the TEST run summary.</p></div>
     <div class="ar">→</div>
-    <div class="box gate"><h2>Approve</h2><p>Reviewer approves <code>production</code>.</p></div>
+    <div class="box gate"><h2>Approve</h2><p>A reviewer approves the <code>production</code> environment in GitHub.</p></div>
     <div class="ar">→</div>
-    <div class="box sn"><h2>Move to PROD</h2><p><code>move</code> from TEST. Same record as a manual pull.</p></div>
+    <div class="box sn"><h2>Move to PROD</h2><p><code>move</code> copies the update set TEST committed, so PROD gets the same record as a manual pull from TEST.</p></div>
   </div>
 
-  <p class="note">A failed preview stops the run and commits nothing. Rejecting the approval keeps the change out of PROD. Merges never wait on a promotion.</p>
+  <p class="note">Rejecting the approval keeps the change out of PROD. Merges never wait on a promotion.</p>
 </div>
 </body>
 </html>
