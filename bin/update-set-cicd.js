@@ -74,6 +74,11 @@ yargs(hideBin(process.argv))
         shared(auth(selection(y)))
             .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write XML files to' }),
         run(cmd.exportCmd))
+    .command('generate <app-dir>', 'Build an update set XML from a now-sdk build output folder (dist/app)', (y) =>
+        shared(y)
+            .positional('app-dir', { type: 'string', describe: 'Folder holding sys_app_<sys_id>.xml and update/ (e.g. dist/app)' })
+            .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write the update set XML to' }),
+        run(cmd.generateCmd))
     .command('import <files..>', 'Load local XML files, preview, and optionally commit', (y) =>
         shared(waitOpts(conflict(auth(y))))
             .positional('files', { type: 'string', describe: 'Update set XML file(s), committed in the order given' })

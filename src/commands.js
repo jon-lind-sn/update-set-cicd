@@ -6,6 +6,7 @@ import { Http } from './http.js'
 import { Cicd } from './cicd.js'
 import { deliver } from './deliver.js'
 import { UpdateSetXml } from './xml.js'
+import { generate } from './generate.js'
 import { selectionQuery, describeSelection } from './select.js'
 import { c } from './output.js'
 
@@ -71,6 +72,11 @@ export async function exportCmd(log, args) {
         files.push({ name: r.name, sys_id: r.sys_id, file })
     }
     log.done({ files })
+}
+
+export async function generateCmd(log, args) {
+    const result = await generate(args.appDir, args.outDir)
+    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}`)
 }
 
 function deliverOpts(args, commit) {

@@ -15,8 +15,14 @@ Move ServiceNow update sets between instances from a laptop or any continuous in
 npm install
 node bin/update-set-cicd.js --help
 node bin/update-set-cicd.js list -a <alias>
+node bin/update-set-cicd.js generate <app>/dist/app --out-dir out
+node bin/update-set-cicd.js import out/*.xml -a <alias> --commit
 node bin/update-set-cicd.js move --update-set-name "My-Project-*" --from <source-alias> --to <target-alias>
 ```
+
+## Generate an update set from a Now SDK app
+
+`generate <app-dir>` reads a Now SDK build folder (`dist/app`) and writes a Retrieved Update Set XML named `<App-Name>-<version>.xml`. Every generated id is a hash of the app content: the same app gives the same file, and any change gives a new update set, so a stale retrieved copy is never reused. Run `npm test` for the unit tests.
 
 ## CI/CD credentials
 

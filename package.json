@@ -11,6 +11,9 @@
   "bin": {
     "update-set-cicd": "bin/update-set-cicd.js"
   },
+  "scripts": {
+    "test": "node --test test/"
+  },
   "files": [
     "bin",
     "src"
