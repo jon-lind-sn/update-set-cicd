@@ -1,7 +1,7 @@
 // Shared target-side pipeline for `move` and `import`:
 // existence check → upload → preview → conflict handling → commit.
 
-import { UpdateSetXml, nextVersionName } from './xml.js'
+import { UpdateSetXml } from './xml.js'
 import { ProblemError, c } from './output.js'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -64,31 +64,18 @@ async function upload(ctx, xml) {
     return id
 }
 
-async function prepareXml(ctx, item) {
-    const xml = new UpdateSetXml(await item.loadXml())
-    if (ctx.opts.asNewVersion) {
-        const { base } = nextVersionName(xml.name, [])
-        const rows = await ctx.target.query('sys_remote_update_set', { query: `nameSTARTSWITH${base}`, fields: 'name', limit: 500 })
-        const { name } = nextVersionName(xml.name, rows.map((r) => r.name))
-        xml.asNewVersion(name)
-        ctx.log.info(c.dim(`  ${item.name}: importing as new version "${name}"`))
-    }
-    return xml
-}
-
 // Returns {name, source_sys_id, remote_update_set, status, problems?, force?}.
 async function stage(ctx, item) {
     const { target, cicd, log, opts } = ctx
     const out = { name: item.name, source_sys_id: item.sourceSysId || undefined }
-    let xml
-    let remote = opts.asNewVersion ? undefined : await findRetrieved(target, item)
+    let remote = await findRetrieved(target, item)
 
     if (remote?.state === 'committed') {
         log.info(`  ${item.name}: ${c.dim(`already committed on ${target.label}, skipped`)}`)
         return { ...out, remote_update_set: remote.sys_id, status: 'already_committed' }
     }
     if (!['loaded', 'previewed'].includes(remote?.state)) {
-        xml = await prepareXml(ctx, item)
+        const xml = new UpdateSetXml(await item.loadXml())
         remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
         out.name = xml.name
         log.info(`  ${out.name}: uploaded (${remote.sys_id})`)
@@ -98,15 +85,7 @@ async function stage(ctx, item) {
 
     // Re-previewing would discard problem resolutions made in the UI.
     const previewed = remote.state === 'loaded' ? await cicd.preview(remote.sys_id) : undefined
-    let problems = await checkedProblems(ctx, remote.sys_id, out.name, previewed)
-
-    if (problems.length && opts.onConflict === 'touch') {
-        log.info(`  ${out.name}: ${problems.length} preview problem(s), touching timestamps and re-uploading`)
-        xml ??= await prepareXml(ctx, item)
-        xml.touchTimestamps()
-        remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
-        problems = await checkedProblems(ctx, remote.sys_id, out.name, await cicd.preview(remote.sys_id))
-    }
+    const problems = await checkedProblems(ctx, remote.sys_id, out.name, previewed)
 
     out.remote_update_set = remote.sys_id
     out.url = `${target.url}/sys_remote_update_set.do?sys_id=${remote.sys_id}`
@@ -131,7 +110,7 @@ export async function commitAll(ctx, ids, force) {
         : ctx.cicd.commitMultiple(ids, { force, wait })
 }
 
-// ctx: {target, http, cicd, log, opts:{onConflict, asNewVersion, commit, wait}}
+// ctx: {target, http, cicd, log, opts:{onConflict, commit, wait}}
 // items: [{name, sourceSysId, sourceUpdatedOn?, loadXml()}] in commit order.
 export async function deliver(ctx, items) {
     const results = []
@@ -141,7 +120,7 @@ export async function deliver(ctx, items) {
     if (blocked.length) {
         const err = new ProblemError(
             `Preview found problems in ${blocked.length} of ${results.length} update set(s); nothing committed. ` +
-                `Resolve them on ${ctx.target.label} and re-run, or use --on-conflict touch|force.`,
+                `Resolve them on ${ctx.target.label} and re-run, or use --on-conflict force.`,
             blocked.flatMap((r) => r.problems),
         )
         err.result = { update_sets: results.map(({ problems, ...r }) => r) }

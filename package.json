@@ -11,12 +11,15 @@
   "bin": {
     "update-set-cicd": "bin/update-set-cicd.js"
   },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
   "files": [
     "bin",
     "src"
   ],
   "engines": {
-    "node": ">=20.18.0"
+    "node": ">=22"
   },
   "dependencies": {
     "@servicenow/sdk": "4.13.6",

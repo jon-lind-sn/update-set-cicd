@@ -24,7 +24,7 @@ const shared = (y) =>
 const waitOpts = (y) =>
     y
         .option('wait', { type: 'boolean', default: true, describe: 'Wait for the operation to finish by polling its progress' })
-        .option('poll-timeout', { type: 'number', default: 900000, describe: 'Maximum time in milliseconds to wait for each operation' })
+        .option('poll-timeout', { type: 'number', default: 120000, describe: 'Maximum time in milliseconds to wait for each operation (progress prints every 10s)' })
 
 const auth = (y) => y.option('auth', { alias: 'a', type: 'string', describe: 'Credential alias to use for authentication with instance' })
 
@@ -42,8 +42,7 @@ const selection = (y, { state = true } = {}) => {
 
 const conflict = (y) =>
     y
-        .option('on-conflict', { type: 'string', choices: ['fail', 'touch', 'force'], default: 'fail', describe: 'Preview problems: fail (stop, nothing committed), touch (reset timestamps and re-upload so incoming changes win), force (force_commit)' })
-        .option('as-new-version', { type: 'boolean', default: false, describe: 'Regenerate sys_ids and import under the next " v N" name' })
+        .option('on-conflict', { type: 'string', choices: ['fail', 'force'], default: 'fail', describe: 'Preview problems: fail (stop, nothing committed; resolve in the instance UI and re-run) or force (force_commit)' })
 
 yargs(hideBin(process.argv))
     .scriptName('update-set-cicd')
@@ -57,8 +56,10 @@ yargs(hideBin(process.argv))
         run(cmd.list))
     .command('move', 'Copy update sets from --from to --to, preview, and commit', (y) =>
         shared(waitOpts(conflict(selection(y))))
-            .option('from', { type: 'string', describe: 'Source credential alias (default: SN_SDK_SOURCE_* environment variables)' })
+            .option('from', { type: 'string', describe: 'Source credential alias' })
+            .option('from-env', { type: 'string', describe: 'Source from environment variables SN_SDK_<NAME>_* (e.g. TEST reads SN_SDK_TEST_INSTANCE_URL)' })
             .option('to', { type: 'string', describe: 'Target credential alias (default: SN_SDK_* environment variables or the default alias)' })
+            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL)' })
             .option('preview-only', { type: 'boolean', default: false, describe: 'Upload and preview, report problems, do not commit' }),
         run(cmd.move))
     .command('commit', 'Commit retrieved update sets that are already on the instance', (y) =>
@@ -73,9 +74,16 @@ yargs(hideBin(process.argv))
         shared(auth(selection(y)))
             .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write XML files to' }),
         run(cmd.exportCmd))
+    .command('generate <app-dir>', 'Build an update set XML from a now-sdk build output folder (dist/app)', (y) =>
+        shared(y)
+            .positional('app-dir', { type: 'string', describe: 'Folder holding sys_app_<sys_id>.xml and update/ (e.g. dist/app)' })
+            .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write the update set XML to' })
+            .option('replace', { type: 'boolean', default: false, describe: 'Include the build-specific SBOM values (serialNumber, timestamp) in the ids, so each new build is a new update set' }),
+        run(cmd.generateCmd))
     .command('import <files..>', 'Load local XML files, preview, and optionally commit', (y) =>
         shared(waitOpts(conflict(auth(y))))
             .positional('files', { type: 'string', describe: 'Update set XML file(s), committed in the order given' })
+            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL), instead of --auth' })
             .option('commit', { type: 'boolean', default: false, describe: 'Commit after a clean preview' }),
         run(cmd.importCmd))
     .demandCommand(1)

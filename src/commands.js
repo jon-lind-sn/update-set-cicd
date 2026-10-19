@@ -6,6 +6,7 @@ import { Http } from './http.js'
 import { Cicd } from './cicd.js'
 import { deliver } from './deliver.js'
 import { UpdateSetXml } from './xml.js'
+import { generate } from './generate.js'
 import { selectionQuery, describeSelection } from './select.js'
 import { c } from './output.js'
 
@@ -14,6 +15,17 @@ async function open(log, args, which) {
     log.info(c.dim(`Auth: ${inst.label} (${inst.url})`))
     const http = new Http(inst)
     return { inst, http, cicd: new Cicd(http, log, { pollTimeout: args.pollTimeout }) }
+}
+
+// --from/--to take a stored alias; --from-env/--to-env NAME read SN_SDK_NAME_*
+// (same variable names as SN_SDK_*, e.g. SN_SDK_TEST_INSTANCE_URL).
+// The target alone may fall back to plain SN_SDK_* or the default alias.
+function instanceRef(alias, envName, flag, optional = false) {
+    if (alias && envName) throw new Error(`Use either ${flag} or ${flag}-env, not both`)
+    if (alias) return { alias }
+    if (envName) return { prefix: `SN_SDK_${envName.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_` }
+    if (!optional) throw new Error(`Provide ${flag} <alias> or ${flag}-env <NAME>`)
+    return {}
 }
 
 // Local update sets on the source matching the selection, oldest first (commit order).
@@ -62,8 +74,13 @@ export async function exportCmd(log, args) {
     log.done({ files })
 }
 
+export async function generateCmd(log, args) {
+    const result = await generate(args.appDir, args.outDir, { replace: args.replace })
+    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}`)
+}
+
 function deliverOpts(args, commit) {
-    return { onConflict: args.onConflict, asNewVersion: args.asNewVersion, commit, wait: args.wait }
+    return { onConflict: args.onConflict, commit, wait: args.wait }
 }
 
 function summarize(result, label) {
@@ -78,8 +95,8 @@ function summarize(result, label) {
 }
 
 export async function move(log, args) {
-    const src = await open(log, args, args.from ? { alias: args.from } : { prefix: 'SN_SDK_SOURCE_' })
-    const tgt = await open(log, args, args.to ? { alias: args.to } : {})
+    const src = await open(log, args, instanceRef(args.from, args.fromEnv, '--from'))
+    const tgt = await open(log, args, instanceRef(args.to, args.toEnv, '--to', true))
     const rows = await sourceUpdateSets(src.inst, args)
     log.info(`Found ${rows.length} update set(s) matching ${describeSelection(args)} (state ${args.state}) on ${src.inst.label}`)
     const items = rows.map((r) => ({
@@ -93,7 +110,8 @@ export async function move(log, args) {
 }
 
 export async function importCmd(log, args) {
-    const tgt = await open(log, args, { alias: args.auth })
+    if (args.auth && args.toEnv) throw new Error('Use either --auth or --to-env, not both')
+    const tgt = await open(log, args, args.toEnv ? instanceRef(undefined, args.toEnv, '--to') : { alias: args.auth })
     const items = []
     for (const file of args.files) {
         const raw = await readFile(file, 'utf8')
@@ -123,7 +141,7 @@ export async function commit(log, args) {
     const items = [...latest.values()].map((r) => ({
         name: r.name,
         sourceSysId: r.remote_sys_id,
-        loadXml: () => { throw new Error(`--on-conflict touch needs the original XML; use move or import for ${r.name}`) },
+        loadXml: () => { throw new Error(`commit cannot re-upload ${r.name}; use move or import`) },
     }))
     const opts = { ...deliverOpts(args, true), onConflict: args.force ? 'force' : 'fail' }
     const result = await deliver({ target: tgt.inst, http: tgt.http, cicd: tgt.cicd, log, opts }, items)

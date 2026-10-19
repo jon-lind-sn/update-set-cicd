@@ -1,0 +1,66 @@
+# Reusable workflow: move update sets from the TEST instance to the PROD instance.
+# Variable and secret names are listed in README.md ("Set up GitHub and ServiceNow").
+#
+#   jobs:
+#     promote:
+#       uses: jon-lind-sn/update-set-cicd/.github/workflows/_move-update-sets.yml@main
+#       with: { pattern: "My-Project-*" }
+#       secrets: inherit
+#
+# The `production` environment gates the job: add required reviewers to it
+# (Settings > Environments) for the manual approval step.
+name: Move update sets
+
+on:
+  workflow_call:
+    inputs:
+      pattern:
+        description: Update set name or pattern with * (e.g. My-Project-*)
+        type: string
+        required: true
+      from:
+        description: Source instance name, TEST or PROD
+        type: string
+        default: TEST
+      to:
+        description: Target instance name, TEST or PROD
+        type: string
+        default: PROD
+      on-conflict:
+        description: fail or force
+        type: string
+        default: fail
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SN_SDK_NODE_ENV: SN_SDK_CI_INSTALL
+      SN_SDK_TEST_INSTANCE_URL: ${{ vars.SN_SDK_TEST_INSTANCE_URL }}
+      SN_SDK_TEST_AUTH_TYPE: ${{ vars.SN_SDK_TEST_AUTH_TYPE }}
+      SN_SDK_TEST_USER: ${{ vars.SN_SDK_TEST_USER }}
+      SN_SDK_TEST_USER_PWD: ${{ secrets.SN_SDK_TEST_USER_PWD }}
+      SN_SDK_TEST_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_ID }}
+      SN_SDK_TEST_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_TEST_OAUTH_CLIENT_SECRET }}
+      SN_SDK_PROD_INSTANCE_URL: ${{ vars.SN_SDK_PROD_INSTANCE_URL }}
+      SN_SDK_PROD_AUTH_TYPE: ${{ vars.SN_SDK_PROD_AUTH_TYPE }}
+      SN_SDK_PROD_USER: ${{ vars.SN_SDK_PROD_USER }}
+      SN_SDK_PROD_USER_PWD: ${{ secrets.SN_SDK_PROD_USER_PWD }}
+      SN_SDK_PROD_OAUTH_CLIENT_ID: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_ID }}
+      SN_SDK_PROD_OAUTH_CLIENT_SECRET: ${{ secrets.SN_SDK_PROD_OAUTH_CLIENT_SECRET }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22   # keep in sync with .nvmrc (this workflow has no checkout)
+      - name: Move update sets
+        env:
+          PATTERN: ${{ inputs.pattern }}
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+          ON_CONFLICT: ${{ inputs.on-conflict }}
+        run: >
+          npx github:jon-lind-sn/update-set-cicd move
+          --update-set-name "$PATTERN"
+          --from-env "$FROM" --to-env "$TO"
+          --on-conflict "$ON_CONFLICT" -o json

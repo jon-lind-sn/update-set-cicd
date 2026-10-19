@@ -54,7 +54,7 @@ function withoutAuthVars(env) {
 
 // Environment for the `auth --print` child.
 //   alias:  ignore any SN_SDK_* in the environment so the stored alias wins.
-//   prefix: map <prefix>X onto SN_SDK_X (e.g. SN_SDK_SOURCE_INSTANCE_URL).
+//   prefix: map <prefix>X onto SN_SDK_X (e.g. SN_SDK_TEST_INSTANCE_URL).
 //   neither: pass the environment through (CI variables or the default alias).
 function authEnv({ alias, prefix }) {
     if (alias) return withoutAuthVars(process.env)
@@ -62,7 +62,8 @@ function authEnv({ alias, prefix }) {
     const env = withoutAuthVars(process.env)
     for (const v of AUTH_VARS) {
         const val = process.env[`${prefix}${v}`]
-        if (val !== undefined) env[`SN_SDK_${v}`] = val
+        // GitHub Actions passes unset variables and secrets as empty strings.
+        if (val !== undefined && val !== '') env[`SN_SDK_${v}`] = val
     }
     // CI mode is usually set once for the whole job.
     if (!env.SN_SDK_NODE_ENV && process.env.SN_SDK_NODE_ENV) env.SN_SDK_NODE_ENV = process.env.SN_SDK_NODE_ENV

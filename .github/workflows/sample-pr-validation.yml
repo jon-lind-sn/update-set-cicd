@@ -1,0 +1,24 @@
+# Sample app: runs on pull requests that change the sample or the tool that
+# processes it. Builds the app and generates the update set; touches no instance.
+# The generated XML is attached to the run as the `update-set` artifact.
+name: Sample PR validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'update-set-cicd-sample/**'
+      - 'bin/**'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.nvmrc'
+      - '.github/workflows/sample-pr-validation.yml'
+      - '.github/workflows/_sample-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/_sample-build.yml
