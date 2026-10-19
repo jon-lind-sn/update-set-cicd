@@ -132,7 +132,7 @@ The pipeline uses two instances: TEST (update sets are committed here first) and
    4. Approve the production deployment in the Actions tab. The update set moves from TEST to PROD.
    5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
-The `CLI: unit tests` workflow runs `npm test` when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
+The `CLI: unit tests` workflow runs `npm test` on every PR and every push to `main`. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 
 ## Learn more
 

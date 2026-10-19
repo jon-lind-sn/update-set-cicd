@@ -6,24 +6,8 @@ name: "CLI: unit tests"
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'bin/**'
-      - 'src/**'
-      - 'test/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.nvmrc'
-      - '.github/workflows/ci.yml'
   push:
     branches: [main]
-    paths:
-      - 'bin/**'
-      - 'src/**'
-      - 'test/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.nvmrc'
-      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 permissions:
