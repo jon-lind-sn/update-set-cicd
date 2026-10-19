@@ -37,8 +37,8 @@ The pipeline uses the same variable, secret, and environment names as the dev-pa
 Repeat for the TEST and PROD instances. Skip this section for an instance that uses basic authentication.
 
 1. Create or choose a service user with the `admin` role. Set its Identity Type to `Human`; the installer rejects other identity types.
-2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` (type `true | false`). Create it in `sys_properties` if it is missing. Reference: KB1645212.
-3. Create the OAuth client. Go to System OAuth > Application Registry > New > New Inbound Integration Experience > New Integration > OAuth Client Credentials Grant, then enter:
+2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` (type `true | false`). Create it in `sys_properties` if it is missing. Reference: [KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212).
+3. Create the OAuth client. Go to System OAuth > Inbound Integrations > New Integration > OAuth Client Credentials Grant, then enter:
    1. Provider Name: any typed value, for example `Update Set CICD`.
    2. OAuth application user: the service user from step 1.
    3. Allow access only to APIs in selected scope: leave unchecked.
