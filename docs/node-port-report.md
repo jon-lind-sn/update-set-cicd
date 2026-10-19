@@ -112,11 +112,11 @@ Items 1 to 3 are superseded by "Decisions" and "Open items for resume" below (to
 
 1. **`--replace` flag** on `move` and `import`. Skips the retrieved-copy reuse check for that run: uploads the XML as a new retrieved update set and previews it. Reason: the existence check keys on source sys_id (`remote_sys_id`), so a corrected file with unchanged ids silently reuses the earlier copy (seen in the app-to-update-set spike). Later option: detect changed content automatically (hash of the XML) so the flag is rarely needed.
 2. Sample SDK app inside this repo; use it to test that DELETE records remove records on the target.
-3. Tier 1 unit tests (`node:test`) as the first GitHub Actions job (Node 22 and 24, no secrets).
+3. Tier 1 unit tests (`node:test`) as the first GitHub Actions job (Node 22 only, no secrets).
 4. `scripts/integration.sh` with stages (unit, seed, move, assert, cleanup) that the workflow reuses. Seed with the `sn_cicd` update set `create` endpoint plus Table API fix script records named `UST-IT-<runid>`; no system properties, no instance changes. Verify whether `create` sets the new update set as current.
 5. Run the OAuth client credentials grant (open item 3 above) and Node 22.
 6. Push to `jon-lind-sn/update-set-cicd` (private) when Jon says so.
 
 ## Decision (2026-10-19): Node 22
 
-1. Node 22 is the supported minimum and the version the GitHub Actions workflows run. Closed; no further version testing is planned beyond the unit test matrix (22 and 24).
+1. Node 22 is the supported minimum and the version the GitHub Actions workflows run. Closed; tests run on Node 22 only. `.nvmrc` holds the version; locally run `nvm use`, in GitHub Actions `actions/setup-node` reads it with `node-version-file`.

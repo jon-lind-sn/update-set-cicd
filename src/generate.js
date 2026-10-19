@@ -2,10 +2,11 @@
 // (the dist/app layout: sys_app_<sys_id>.xml at the root or in scope/, plus
 // update/ and author_elective_update/ record files).
 //
-// Node port of update-set-gen/gen_update_set.py. Differences from the Python:
-// every generated id is a hash of the content, so the same app produces the
-// same file and a changed app produces new ids (the upload step reuses a
-// retrieved copy by remote_sys_id, so a stale copy can never be reused).
+// Node port of update-set-gen/gen_update_set.py. Difference from the Python:
+// every generated id is a hash of the content. The same app gives the same ids
+// (the upload step reuses a retrieved copy by remote_sys_id, so an update set
+// already on the target is skipped) and a changed app gives new ids, so a stale
+// copy is never reused.
 
 import { createHash } from 'node:crypto'
 import { readdir, readFile, stat, mkdir, writeFile } from 'node:fs/promises'
@@ -119,8 +120,17 @@ async function findAppXml(appDir) {
     throw new Error(`No sys_app_<sys_id>.xml found at the root of ${appDir} or in its scope/ folder`)
 }
 
+// now-sdk writes an SBOM record (.../bom.json) with a random serialNumber and a
+// build timestamp, so two builds of the same source differ only there.
+const isSbom = (r) => r.targetName.endsWith('/bom.json')
+const BUILD_VALUES = /"(serialNumber|timestamp)"\s*:\s*"[^"]*"/g
+
 // Returns { fileName, xml, name, version, records }.
-export async function buildUpdateSet(appDir) {
+// Generated ids are a hash of the content, so unchanged content keeps its ids
+// and the upload step finds the copy already on the target. The SBOM's build
+// values are left out of the hash unless `replace` is set, which makes every
+// new build a new update set.
+export async function buildUpdateSet(appDir, { replace = false } = {}) {
     const appPath = await findAppXml(appDir)
     const app = parseRecordUpdate(await readFile(appPath, 'utf8'), appPath)
     if (app.table !== 'sys_app') throw new Error(`${appPath}: expected a sys_app record, found ${app.table}`)
@@ -148,8 +158,8 @@ export async function buildUpdateSet(appDir) {
         })
     }
 
-    // Ids depend on everything that is imported, so any change gives a new update set.
-    const contentKey = hashId(appSysId, version, ...records.flatMap((r) => [r.name, r.payload]))
+    const hashed = (r) => (replace || !isSbom(r) ? r.payload : r.payload.replace(BUILD_VALUES, '"$1":""'))
+    const contentKey = hashId(appSysId, version, ...records.flatMap((r) => [r.name, hashed(r)]))
     const setId = hashId('update-set', contentKey)
     const remoteSysId = hashId('remote', contentKey)
 
@@ -225,8 +235,8 @@ export async function buildUpdateSet(appDir) {
 }
 
 // Build and write the update set; returns the summary the command prints.
-export async function generate(appDir, outDir = '.') {
-    const built = await buildUpdateSet(appDir)
+export async function generate(appDir, outDir = '.', options = {}) {
+    const built = await buildUpdateSet(appDir, options)
     await mkdir(outDir, { recursive: true })
     const file = path.join(outDir, built.fileName)
     await writeFile(file, built.xml)

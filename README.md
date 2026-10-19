@@ -6,7 +6,7 @@ Move ServiceNow update sets between instances from a laptop or any continuous in
 
 ## Requirements
 
-1. Node.js 22 or later.
+1. Node.js 22 or later. `.nvmrc` pins 22: run `nvm use` in this folder.
 2. ServiceNow Now SDK credentials (`@servicenow/sdk` is a dependency; no separate install).
 
 ## Quick start
@@ -22,7 +22,7 @@ node bin/update-set-cicd.js move --update-set-name "My-Project-*" --from <source
 
 ## Generate an update set from a Now SDK app
 
-`generate <app-dir>` reads a Now SDK build folder (`dist/app`) and writes a Retrieved Update Set XML named `<App-Name>-<version>.xml`. Every generated id is a hash of the app content: the same app gives the same file, and any change gives a new update set, so a stale retrieved copy is never reused. Run `npm test` for the unit tests.
+`generate <app-dir>` reads a Now SDK build folder (`dist/app`) and writes a Retrieved Update Set XML named `<App-Name>-<version>.xml`. Every generated id is a hash of the app content. The same app gives the same ids, so an update set already on the target is reported as already committed and skipped. A change to the app gives new ids and uploads as a new update set. Each now-sdk build writes a random serial number and timestamp into an SBOM record; those two values are left out of the hash, so a rebuild of unchanged source keeps its ids. Pass `--replace` to include them, which makes every new build a new update set. Run `npm test` for the unit tests.
 
 ## CI/CD credentials
 

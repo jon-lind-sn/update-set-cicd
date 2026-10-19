@@ -49,7 +49,16 @@ const deleteXml = `<?xml version="1.0"?>
 </record_update>`
 
 // Writes a now-sdk style build folder (scope/ plus update/) and returns its path.
-async function makeApp({ app = appXml(), script = "gs.info('hi')", appInScope = true } = {}) {
+const bomXml = (serial, ts) => `<?xml version="1.0"?>
+<record_update table="sys_module">
+  <sys_module action="INSERT_OR_UPDATE">
+    <sys_id>975093a022e641e88954f7548cf157d4</sys_id>
+    <path>x_acme_app/acme/1.2.3/bom.json</path>
+    <content>{ "serialNumber": "urn:uuid:${serial}", "metadata": { "timestamp": "${ts}" }, "components": [] }</content>
+  </sys_module>
+</record_update>`
+
+async function makeApp({ app = appXml(), script = "gs.info('hi')", appInScope = true, bom } = {}) {
     const dir = await mkdtemp(path.join(tmpdir(), 'ust-gen-'))
     await mkdir(path.join(dir, 'update'), { recursive: true })
     const appDir = appInScope ? path.join(dir, 'scope') : dir
@@ -57,6 +66,7 @@ async function makeApp({ app = appXml(), script = "gs.info('hi')", appInScope = 
     await writeFile(path.join(appDir, `sys_app_${APP_ID}.xml`), app)
     await writeFile(path.join(dir, 'update', `sys_script_fix_${FIX_ID}.xml`), fixXml(script))
     await writeFile(path.join(dir, 'update', 'sys_ui_page_aaaabbbbccccddddeeeeffff00001111.xml'), deleteXml)
+    if (bom) await writeFile(path.join(dir, 'update', 'sys_module_975093a022e641e88954f7548cf157d4.xml'), bomXml(...bom))
     return dir
 }
 
@@ -142,6 +152,21 @@ test('output is deterministic and any content change gives new ids', async () =>
     const bumped = await buildUpdateSet(await makeApp({ app: appXml({ version: '1.2.4' }) }))
     assert.notEqual(new UpdateSetXml(bumped.xml).sourceSysId, new UpdateSetXml(a.xml).sourceSysId)
     assert.equal(bumped.fileName, 'Acme-App-1.2.4.xml')
+})
+
+test('a rebuild with only new SBOM build values keeps its ids unless --replace is set', async () => {
+    const first = await makeApp({ bom: ['1111', '2026-10-19T10:00:00Z'] })
+    const rebuilt = await makeApp({ bom: ['2222', '2026-10-19T11:00:00Z'] })
+    const idOf = async (dir, options) => new UpdateSetXml((await buildUpdateSet(dir, options)).xml).sourceSysId
+
+    assert.equal(await idOf(first), await idOf(rebuilt))
+    assert.notEqual(await idOf(first, { replace: true }), await idOf(rebuilt, { replace: true }))
+    // The values are still written to the file; they only stay out of the hash.
+    assert.match((await buildUpdateSet(rebuilt)).xml, /urn:uuid:2222/)
+
+    // A real content change is still a new update set.
+    const edited = await makeApp({ bom: ['1111', '2026-10-19T10:00:00Z'], script: "gs.info('edited')" })
+    assert.notEqual(await idOf(first), await idOf(edited))
 })
 
 test('app file at the folder root is found, and a global app keeps "global"', async () => {

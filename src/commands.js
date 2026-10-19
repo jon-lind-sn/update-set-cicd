@@ -75,7 +75,7 @@ export async function exportCmd(log, args) {
 }
 
 export async function generateCmd(log, args) {
-    const result = await generate(args.appDir, args.outDir)
+    const result = await generate(args.appDir, args.outDir, { replace: args.replace })
     log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}`)
 }
 
