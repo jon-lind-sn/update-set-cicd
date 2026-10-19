@@ -50,12 +50,12 @@
     <div class="ar">→</div>
     <div class="box dev"><h2>Open a pull request (PR)</h2><p>A teammate reviews the code and the PR checks.</p></div>
     <div class="ar">→</div>
-    <div class="box gh"><h2>PR checks</h2><p>A dry run. <code>now-sdk build</code> and <code>generate</code> prove the update set can be built. Nothing is deployed.</p></div>
+    <div class="box gh"><h2>PR checks</h2><p>A dry run using <code>now-sdk build</code> and <code>generate</code> proves the update set can be built from the source branch.</p></div>
   </div>
 
   <div class="lane">2. Deploy to TEST (on merge to main)</div>
   <div class="row">
-    <div class="box gh"><h2>Generate update set</h2><p>GitHub Actions builds the Fluent source with <code>now-sdk build</code>, then <code>generate</code> creates the update set file.</p></div>
+    <div class="box gh"><h2>Generate update set</h2><p>After PR approval and merge, <code>now-sdk build</code> and <code>generate</code> run on the main branch to create the update set file.</p></div>
     <div class="ar">→</div>
     <div class="box sn"><h2>Import to TEST</h2><p><code>import</code> uploads the file, previews it, and commits it on TEST. A preview problem stops the run and commits nothing.</p></div>
     <div class="ar none"></div>
