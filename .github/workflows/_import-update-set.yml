@@ -1,11 +1,11 @@
-# Library workflow (workflow_call): import the `update-set` artifact into one
+# Reusable workflow (workflow_call): import the `update-set` artifact into one
 # instance (TEST or PROD), preview it, and commit it. Run `_sample-build.yml`
 # first so the artifact exists.
 #
 # Credentials come from these repository variables and secrets:
 # SN_SDK_<NAME>_INSTANCE_URL, _AUTH_TYPE, _USER (variables) and _USER_PWD,
 # _OAUTH_CLIENT_ID, _OAUTH_CLIENT_SECRET (secrets), where <NAME> is TEST or PROD.
-name: Import update set (library)
+name: Import update set (reusable)
 
 on:
   workflow_call:
