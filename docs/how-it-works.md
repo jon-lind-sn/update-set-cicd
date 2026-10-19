@@ -8,8 +8,7 @@ A graphic version of this flow is in [developer-workflow.html](https://htmlprevi
 2. A pull request (PR) starts `Sample PR validation`. It installs dependencies, runs `now-sdk build --frozenKeys` (which fails if `keys.ts` is out of date), and runs `update-set-cicd generate` to produce the update set XML. The XML is uploaded as the `update-set` artifact. No instance is touched.
 3. A merge to `main` starts `Sample deploy to Prod`. It builds once and uploads the same artifact.
 4. `deploy-test` downloads the artifact and runs `update-set-cicd import --to-env TEST --commit`: upload, preview, commit.
-5. `approve-prod` waits for a reviewer on the `production` environment.
-6. `deploy-prod` imports and commits the same file on PROD.
+5. `deploy-prod` waits for a reviewer on the `production` environment, then runs `update-set-cicd move --from-env TEST --to-env PROD` on the update set TEST committed. PROD receives the same record a manual pull from TEST would copy.
 
 ## Update set identity
 
