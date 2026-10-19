@@ -46,7 +46,7 @@
 <body>
 <div class="wrap">
   <h1>Update Set CI/CD: the developer workflow</h1>
-  <p class="sub">What happens from the first code change to a committed update set in production. Continuous integration and delivery (CI/CD) runs in GitHub Actions, so the developer only writes code and clicks Approve.</p>
+  <p class="sub">What happens from the first code change to a committed update set in production. Continuous integration and delivery (CI/CD) runs in GitHub Actions, so the developer writes code, merges a pull request, and starts the production promotion.</p>
 
   <div class="legend">
     <span style="--c:var(--dev)">Developer</span>
@@ -98,9 +98,9 @@
     <li class="step gh">
       <div class="num">5</div>
       <div class="card">
-        <h2>Build the release update set</h2>
+        <h2>Generate the release update set</h2>
         <div class="who">GitHub Actions, on merge to main</div>
-        <p>The same build runs again on the merged code and produces the update set that will be promoted. One file is built once and moved through every environment.</p>
+        <p>The build runs on the merged code and <code>generate</code> creates the update set from it. This is where the update set is born: no instance has it yet, and git holds the source of truth. The file is built once.</p>
         <div class="tools"><span class="tool">now-sdk build</span><span class="tool">update-set-cicd generate</span></div>
       </div>
     </li>
@@ -110,7 +110,7 @@
       <div class="card">
         <h2>Deploy to TEST</h2>
         <div class="who">GitHub Actions to the TEST instance</div>
-        <p>The update set is uploaded, previewed, and committed on TEST. If the preview finds a problem (for example a conflicting newer change), the run stops here and nothing is committed.</p>
+        <p>The generated file is imported to TEST: uploaded, previewed, and committed. The run summary prints the update set name. If the preview finds a problem (for example a conflicting newer change), the run stops here and nothing is committed.</p>
         <div class="tools"><span class="tool">update-set-cicd import</span></div>
         <div class="out"><b>Result:</b> the change is live on TEST for testing.</div>
       </div>
@@ -146,7 +146,7 @@
     </ol>
   </div>
 
-  <p class="note">This is the planned flow. The commands shown for steps 3, 5, 6 and 8 are the target design: the <code>generate</code> command does not exist yet and the pipeline has not been run end to end.</p>
+  <p class="note">TEST receives the update set by import because nothing earlier holds it. PROD receives it by <code>move</code> from TEST, which creates the same record a manual update set pull from TEST creates. Each merge deploys to TEST only, so a pending PROD approval never blocks later merges.</p>
 </div>
 </body>
 </html>

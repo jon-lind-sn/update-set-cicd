@@ -1,36 +1,100 @@
 # update-set-cicd
 
-Move ServiceNow update sets between instances from a laptop or from a continuous integration and continuous delivery (CI/CD) pipeline, using the credentials and conventions of the [ServiceNow SDK](https://www.npmjs.com/package/@servicenow/sdk). It can also build an update set from a Now SDK (Fluent) app, so an SDK app can be promoted TEST to PROD with update sets instead of the Application Repository.
+Move ServiceNow update sets between instances from a laptop or from a continuous integration and continuous delivery (CI/CD) pipeline. The CLI uses the credentials and conventions of the [ServiceNow SDK](https://www.npmjs.com/package/@servicenow/sdk). It can also build an update set from a Now SDK (Fluent) app, so a Fluent app can be promoted from TEST to PROD with update sets instead of the Application Repository.
 
-This repository holds the CLI and a sample app (a Now SDK Fluent app) (`update-set-cicd-sample/`) with a working GitHub Actions pipeline.
+This repository holds two things:
 
-> **Caution:** the pipeline writes to your instances without a human in the loop, except for the approval gate before PROD. Start with sub-production instances and keep secrets out of version control.
+1. The CLI (`bin/`, `src/`). It is tested and never deployed to an instance.
+2. A sample app (`update-set-cicd-sample/`), a small Fluent app, with GitHub Actions workflows that build it, deploy it to TEST on every merge, and promote it to PROD after a reviewer approves.
 
-## Use the CLI
+> **Caution:** the CLI and the pipeline write to your instances. Start with sub-production instances and keep secrets out of version control.
 
-Requires Node.js 22 (`nvm use` picks it up from `.nvmrc`).
+## Two ways to try it
 
-```bash
-npm install
-node bin/update-set-cicd.js --help
-```
+1. **CLI only.** Install nothing but Node.js, store credentials for one or two instances, and run commands from your terminal. No fork and no GitHub setup. Start with [Try the CLI](#try-the-cli).
+2. **Full pipeline.** Fork the repository, give the workflows credentials for a TEST and a PROD instance, and watch a change flow from a pull request (PR) to TEST to PROD. Start with [Try the pipeline](#try-the-pipeline).
+
+## How the pipeline flows
+
+The update set is built from the Fluent source in git when a PR merges. TEST receives it by import. PROD receives it by moving the update set that TEST committed, which gives PROD the same record a manual pull from TEST creates.
+
+1. A developer changes the sample app on a branch and bumps `version` in `update-set-cicd-sample/package.json`.
+2. A PR runs `Sample app: PR build and generate`. It builds the app and generates the update set. No instance is touched.
+3. A merge to `main` runs `Sample app: deploy to TEST`. It builds once, then imports, previews, and commits the update set on TEST. The update set name appears in the run summary.
+4. When the version is ready for production, someone runs `Sample app: promote to PROD` from the Actions tab and enters that name. A reviewer approves the `production` environment, then the update set moves from TEST to PROD.
+
+See the [flow diagram](https://htmlpreview.github.io/?https://github.com/jon-lind-sn/update-set-cicd/blob/main/docs/developer-workflow.html), [how the pipeline works](docs/how-it-works.md), and the [workflow files](.github/workflows/README.md).
+
+## Try the CLI
+
+Requires Node.js 22 (`nvm use` reads `.nvmrc`) and a user with the `admin` role on each instance.
+
+1. Get the CLI. Either run it straight from GitHub with no install:
+
+   ```bash
+   npx github:jon-lind-sn/update-set-cicd --help
+   ```
+
+   or clone it:
+
+   ```bash
+   git clone https://github.com/jon-lind-sn/update-set-cicd.git
+   cd update-set-cicd
+   npm install
+   node bin/update-set-cicd.js --help
+   ```
+
+   The examples below use `update-set-cicd` for either form.
+
+2. Store a credential alias for each instance. The command prompts for the credentials:
+
+   ```bash
+   npx @servicenow/sdk auth --add https://dev1.service-now.com --type basic --alias dev1
+   npx @servicenow/sdk auth --add https://dev2.service-now.com --type basic --alias dev2
+   npx @servicenow/sdk auth --list
+   ```
+
+3. List completed update sets on an instance (a read-only check that the credential works):
+
+   ```bash
+   update-set-cicd list --auth dev1
+   ```
+
+4. Copy an update set from one instance to another. Preview first, then commit:
+
+   ```bash
+   update-set-cicd move --from dev1 --to dev2 --update-set-name "My Update Set" --preview-only
+   update-set-cicd move --from dev1 --to dev2 --update-set-name "My Update Set"
+   ```
+
+   `--update-set-name` accepts a pattern such as `"My-Project-*"`. If the preview finds a problem, nothing is committed (`--on-conflict fail`, the default) and the output lists each problem.
+
+5. Build an update set from the sample app and load it. This needs the clone from step 1:
+
+   ```bash
+   cd update-set-cicd-sample && npm ci && npx now-sdk build && cd ..
+   node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir out
+   node bin/update-set-cicd.js import out/*.xml --auth dev1 --commit
+   ```
+
+   Running `import` again for the same version reports `already committed` and skips it. Each new `version` in `package.json` produces a new update set.
 
 | Command | What it does |
 |---|---|
 | `list` | List update sets on an instance |
 | `move` | Copy update sets from one instance to another, preview, and commit |
-| `import <files>` | Load XML files, preview, and optionally commit (`--commit`) |
+| `import <files>` | Load Extensible Markup Language (XML) files, preview, and optionally commit (`--commit`) |
 | `export` | Write update sets to local XML files |
 | `commit` / `rollback` | Commit retrieved update sets already on the instance, or back one out |
 | `generate <app-dir>` | Build an update set XML from a Now SDK build folder (`dist/app`) |
 
-Pick instances with a stored Now SDK alias (`--auth`, `--from`, `--to`) or with environment variables (`--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`). Add `-o json` for machine-readable output. Re-running a command for an update set that is already committed reports it and skips it.
+Pick instances with a stored alias (`--auth`, `--from`, `--to`) or with environment variables (`--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`). Add `-o json` for machine-readable output. Run any command with `--help` for all options.
 
-## Set up the pipeline
+## Try the pipeline
 
-The pipeline has two instances: TEST (update sets are committed here first) and PROD (promoted here after approval). It authenticates with Open Authorization (OAuth) client credentials, which needs no interactive login. Basic authentication also works.
+The pipeline uses two instances: TEST (update sets are committed here first) and PROD (promoted here after approval). It authenticates with Open Authorization (OAuth) client credentials, which needs no interactive sign-in. Basic authentication also works. Reviewers on a private repository need a paid GitHub plan.
 
-1. Fork this repository and clone it.
+1. Fork this repository and clone it. GitHub disables workflows on a new fork, so open the Actions tab of the fork and enable them.
 2. On each instance, create the OAuth client (skip for basic authentication):
    1. Create or choose a service user with the `admin` role and Identity Type `Human`.
    2. Set the system property `glide.oauth.inbound.client.credential.grant_type.enabled` to `true` ([KB1645212](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB1645212)).
@@ -60,17 +124,15 @@ The pipeline has two instances: TEST (update sets are committed here first) and 
    | `SN_SDK_{TEST,PROD}_USER` | variable | basic |
    | `SN_SDK_{TEST,PROD}_USER_PWD` | secret | basic |
 
-5. Create the approval gate. In the repository go to Settings > Environments > New environment, name it `production`, and add Required reviewers. Reviewers on a private repository need a paid GitHub plan.
+5. Create the approval gate. In the repository go to Settings > Environments > New environment, name it `production`, and add Required reviewers.
+6. Run a change through it:
+   1. Create a branch, change the sample app (for example the message in `update-set-cicd-sample/src/server/fix-scripts/hello-update-set-cicd.js`), and bump `version` in `update-set-cicd-sample/package.json`.
+   2. Open a PR. The `Sample app: PR build and generate` check builds the app and attaches the generated update set to the run.
+   3. Merge to `main`. `Sample app: deploy to TEST` commits the update set on TEST. Open the run summary to copy the update set name, for example `Update Set Deploy CICD Sample v0.0.4`.
+   4. In the Actions tab run `Sample app: promote to PROD`, paste the name, and approve the `production` environment. The update set moves from TEST to PROD.
+   5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
 
-## Run it
-
-1. Create a branch, change the sample app, and bump `version` in `update-set-cicd-sample/package.json`. Each version is a new update set.
-2. Open a pull request (PR). The `Sample app: PR build and generate` check builds the app and generates the update set, and attaches it to the run. It touches no instance.
-3. Merge to `main`. `Sample app: deploy to TEST` builds once and commits the update set on TEST. It also prints the update set name in the run summary. You can start it by hand from the Actions tab.
-4. When the version is ready for production, start `Sample app: promote to PROD` from the Actions tab and enter that update set name. A reviewer approves the `production` environment, then the committed update set moves from TEST to PROD. Skipped versions never reach PROD, and merges are never blocked by a pending promotion.
-5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
-
-The `CLI: unit tests` workflow runs the unit tests (`npm test`) when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
+The `CLI: unit tests` workflow runs `npm test` when the CLI changes. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 
 ## Learn more
 
