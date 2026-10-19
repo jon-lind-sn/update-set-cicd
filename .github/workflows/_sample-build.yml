@@ -46,7 +46,9 @@ jobs:
         id: generate
         run: |
           node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir update-set -o json | tee generate.json
-          echo "name=$(node -p "require('./generate.json').result.name")" >> "$GITHUB_OUTPUT"
+          name=$(node -p "require('./generate.json').result.name")
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "Update set: \`$name\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload update set
         uses: actions/upload-artifact@v7

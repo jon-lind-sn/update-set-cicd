@@ -6,9 +6,9 @@ A graphic version of this flow is in [developer-workflow.html](https://htmlprevi
 
 1. A developer changes the Fluent app on a branch and bumps `version` in `package.json`.
 2. A pull request (PR) starts `Sample app: PR build and generate`. It installs dependencies, runs `now-sdk build --frozenKeys` (which fails if `keys.ts` is out of date), and runs `update-set-cicd generate` to produce the update set XML. The XML is uploaded as the `update-set` artifact. No instance is touched.
-3. A merge to `main` starts `Sample app: deploy TEST then PROD`. It builds once and uploads the same artifact.
+3. A merge to `main` starts `Sample app: deploy to TEST`. It builds once, uploads the artifact, and prints the update set name in the run summary.
 4. `deploy-test` downloads the artifact and runs `update-set-cicd import --to-env TEST --commit`: upload, preview, commit.
-5. `deploy-prod` waits for a reviewer on the `production` environment, then runs `update-set-cicd move --from-env TEST --to-env PROD` on the update set TEST committed. PROD receives the same record a manual pull from TEST would copy.
+5. When the version is ready for production, someone starts `Sample app: promote to PROD` by hand with that update set name. The job waits for a reviewer on the `production` environment, then runs `update-set-cicd move --from-env TEST --to-env PROD` on the update set TEST committed. Merges are never blocked while a promotion waits. PROD receives the same record a manual pull from TEST would copy.
 
 ## Update set identity
 
