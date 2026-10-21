@@ -125,12 +125,33 @@ async function findAppXml(appDir) {
 const isSbom = (r) => r.targetName.endsWith('/bom.json')
 const BUILD_VALUES = /"(serialNumber|timestamp)"\s*:\s*"[^"]*"/g
 
+// Platform timestamps are UTC as "YYYY-MM-DD HH:MM:SS". Accepts that form (read as
+// UTC) or any ISO 8601 instant.
+export function toPlatformTime(value) {
+    const s = String(value).trim()
+    const d = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(s) ? new Date(`${s.replace(' ', 'T')}Z`) : new Date(s)
+    if (Number.isNaN(d.getTime())) throw new Error(`Invalid time '${value}'; use YYYY-MM-DD HH:MM:SS (UTC) or an ISO 8601 time`)
+    return d.toISOString().slice(0, 19).replace('T', ' ')
+}
+
+// The now-sdk build records its own time in the SBOM. Returns undefined when the
+// folder has no SBOM or no usable time.
+function sbomTime(records) {
+    const sbom = records.find(isSbom)
+    const m = sbom?.unstamped.match(/"timestamp"\s*:\s*"([^"]*)"/)
+    try {
+        return m && toPlatformTime(m[1])
+    } catch {
+        return undefined
+    }
+}
+
 // Returns { fileName, xml, name, version, records }.
 // Generated ids are a hash of the content, so unchanged content keeps its ids
 // and the upload step finds the copy already on the target. The SBOM's build
 // values are left out of the hash unless `replace` is set, which makes every
 // new build a new update set.
-export async function buildUpdateSet(appDir, { replace = false } = {}) {
+export async function buildUpdateSet(appDir, { replace = false, updatedOn } = {}) {
     const appPath = await findAppXml(appDir)
     const app = parseRecordUpdate(await readFile(appPath, 'utf8'), appPath)
     if (app.table !== 'sys_app') throw new Error(`${appPath}: expected a sys_app record, found ${app.table}`)
@@ -154,11 +175,32 @@ export async function buildUpdateSet(appDir, { replace = false } = {}) {
             createdBy: fieldText(r.recordEl, 'sys_updated_by') || 'admin',
             createdOn: fieldText(r.recordEl, 'sys_updated_on') || '',
             targetName: deriveTargetName(r.recordEl, r.table, sysId),
-            payload: payloadXml(r.root),
+            // Hashed and stamped later; the stamp stays out of the content hash.
+            unstamped: payloadXml(r.root),
+            parsed: r,
         })
     }
 
-    const hashed = (r) => (replace || !isSbom(r) ? r.payload : r.payload.replace(BUILD_VALUES, '"$1":""'))
+    // The now-sdk build leaves sys_updated_on out of every record, so the target
+    // would have no edit time to compare with a local change. Records that carry
+    // their own time (a source-controlled app folder) keep it.
+    let stamp
+    let stampSource
+    if (updatedOn) [stamp, stampSource] = [toPlatformTime(updatedOn), 'option']
+    else if ((stamp = sbomTime(records))) stampSource = 'build'
+    else [stamp, stampSource] = [toPlatformTime(new Date()), 'generation time']
+    for (const r of records) {
+        r.payload = r.unstamped
+        if (r.createdOn) continue
+        r.createdOn = stamp
+        if (r.action !== 'INSERT_OR_UPDATE' || !r.parsed.recordEl) continue
+        const t = r.parsed.doc.createElement('sys_updated_on')
+        t.appendChild(r.parsed.doc.createTextNode(stamp))
+        r.parsed.recordEl.appendChild(t)
+        r.payload = payloadXml(r.parsed.root)
+    }
+
+    const hashed = (r) => (replace || !isSbom(r) ? r.unstamped : r.unstamped.replace(BUILD_VALUES, '"$1":""'))
     const contentKey = hashId(appSysId, version, ...records.flatMap((r) => [r.name, hashed(r)]))
     const setId = hashId('update-set', contentKey)
     const remoteSysId = hashId('remote', contentKey)
@@ -231,7 +273,7 @@ export async function buildUpdateSet(appDir, { replace = false } = {}) {
         entries.map((e) => `<sys_update_xml action="INSERT_OR_UPDATE">${e}</sys_update_xml>`).join('') +
         '</unload>'
 
-    return { fileName: `${appName.replaceAll(' ', '-')}-${version}.xml`, xml, name: `${appName} v${version}`, version, records: records.length }
+    return { fileName: `${appName.replaceAll(' ', '-')}-${version}.xml`, xml, name: `${appName} v${version}`, version, records: records.length, updatedOn: stamp, updatedOnSource: stampSource }
 }
 
 // Build and write the update set; returns the summary the command prints.
@@ -240,5 +282,5 @@ export async function generate(appDir, outDir = '.', options = {}) {
     await mkdir(outDir, { recursive: true })
     const file = path.join(outDir, built.fileName)
     await writeFile(file, built.xml)
-    return { file, name: built.name, version: built.version, records: built.records }
+    return { file, name: built.name, version: built.version, records: built.records, updated_on: built.updatedOn, updated_on_source: built.updatedOnSource }
 }

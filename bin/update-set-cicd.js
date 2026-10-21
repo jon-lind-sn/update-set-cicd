@@ -82,6 +82,7 @@ yargs(hideBin(process.argv))
         shared(y)
             .positional('app-dir', { type: 'string', describe: 'Folder holding sys_app_<sys_id>.xml and update/ (e.g. dist/app)' })
             .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write the update set XML to' })
+            .option('updated-on', { type: 'string', describe: 'Edit time for records that have none, YYYY-MM-DD HH:MM:SS (UTC) or an ISO 8601 time (default: the build time recorded in the SBOM, else now)' })
             .option('replace', { type: 'boolean', default: false, describe: 'Include the build-specific SBOM values (serialNumber, timestamp) in the ids, so each new build is a new update set' }),
         run(cmd.generateCmd))
     .command('import <files..>', 'Load one or more XML files (a.xml b.xml or a glob) and preview them; commit with --commit', (y) =>

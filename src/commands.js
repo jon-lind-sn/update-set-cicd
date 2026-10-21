@@ -76,8 +76,8 @@ export async function exportCmd(log, args) {
 }
 
 export async function generateCmd(log, args) {
-    const result = await generate(args.appDir, args.outDir, { replace: args.replace })
-    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}`)
+    const result = await generate(args.appDir, args.outDir, { replace: args.replace, updatedOn: args.updatedOn })
+    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}\n  ${c.dim(`Records without an edit time are stamped ${result.updated_on} UTC (${result.updated_on_source})`)}`)
 }
 
 function deliverOpts(args, commit) {
