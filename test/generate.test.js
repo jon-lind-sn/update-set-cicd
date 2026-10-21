@@ -7,7 +7,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { DOMParser } from '@xmldom/xmldom'
 
-import { buildUpdateSet, deriveTargetName, generate, hashId, parseRecordUpdate, typeLabelForTable } from '../src/generate.js'
+import { buildUpdateSet, deriveTargetName, generate, hashId, parseRecordUpdate, toPlatformTime, typeLabelForTable } from '../src/generate.js'
 import { UpdateSetXml } from '../src/xml.js'
 
 const run = promisify(execFile)
@@ -206,4 +206,39 @@ test('generate writes the file and the CLI prints a json envelope', async () => 
     assert.equal(env.ok, true)
     assert.equal(env.result.records, 3)
     assert.equal(env.result.name, 'Acme App v1.2.3')
+})
+
+test('records without sys_updated_on are stamped with the build time, and the stamp stays out of the ids', async () => {
+    const bare = (xml) => xml.replace(/\s*<sys_updated_on>[^<]*<\/sys_updated_on>/g, '')
+    const make = async (ts) => {
+        const dir = await makeApp({ app: bare(appXml()), bom: ['1111', ts] })
+        await writeFile(path.join(dir, 'update', `sys_script_fix_${FIX_ID}.xml`), bare(fixXml("gs.info('hi')")))
+        return dir
+    }
+    const first = await buildUpdateSet(await make('2026-10-21T14:00:00-04:00'))
+    assert.equal(first.updatedOn, '2026-10-21 18:00:00')
+    assert.equal(first.updatedOnSource, 'build')
+    const doc = parse(first.xml)
+    for (const e of kids(doc, 'sys_update_xml')) {
+        assert.equal(field(e, 'sys_updated_on'), '2026-10-21 18:00:00')
+        // A DELETE entry stays as the platform wrote it, with no field added.
+        if (field(e, 'action') !== 'DELETE') assert.match(field(e, 'payload'), /<sys_updated_on>2026-10-21 18:00:00<\/sys_updated_on>/)
+    }
+
+    // A later build of the same source: new stamp, same ids.
+    const later = await buildUpdateSet(await make('2026-10-22T09:00:00Z'))
+    const idOf = (b) => new UpdateSetXml(b.xml).sourceSysId
+    assert.equal(later.updatedOn, '2026-10-22 09:00:00')
+    assert.equal(idOf(first), idOf(later))
+
+    assert.equal((await buildUpdateSet(await make('2026-10-21T14:00:00-04:00'), { updatedOn: '2026-01-02 03:04:05' })).updatedOnSource, 'option')
+    assert.throws(() => toPlatformTime('not a time'), /Invalid time/)
+})
+
+test('a record that has its own sys_updated_on keeps it, and a folder without an SBOM falls back to now', async () => {
+    const built = await buildUpdateSet(await makeApp())
+    assert.equal(built.updatedOnSource, 'generation time')
+    const entries = kids(parse(built.xml), 'sys_update_xml')
+    assert.ok(entries.some((e) => field(e, 'sys_updated_on') === '2026-10-19 10:05:00'))
+    assert.ok(entries.every((e) => /<sys_updated_on>/.test(field(e, 'payload')) || field(e, 'action') === 'DELETE'))
 })

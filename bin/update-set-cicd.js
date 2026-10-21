@@ -61,6 +61,7 @@ yargs(hideBin(process.argv))
             .option('from', { type: 'string', describe: 'Source credential alias' })
             .option('from-env', { type: 'string', describe: 'Source from environment variables SN_SDK_<NAME>_* (e.g. TEST reads SN_SDK_TEST_INSTANCE_URL)' })
             .option('to', { type: 'string', describe: 'Target credential alias (default: SN_SDK_* environment variables or the default alias)' })
+            .option('update-source', { type: 'string', describe: 'Update Source on the target to retrieve from: sys_id, name, or instance ID (default: the one whose URL is the source)' })
             .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL)' })
             .example('$0 move --from dev --to test --update-set-name "My Update Set"', 'Preview only')
             .example('$0 move --from dev --to test --update-set-name "My Update Set" --commit', 'Preview, then commit'),
@@ -81,6 +82,7 @@ yargs(hideBin(process.argv))
         shared(y)
             .positional('app-dir', { type: 'string', describe: 'Folder holding sys_app_<sys_id>.xml and update/ (e.g. dist/app)' })
             .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write the update set XML to' })
+            .option('updated-on', { type: 'string', describe: 'Edit time for records that have none, YYYY-MM-DD HH:MM:SS (UTC) or an ISO 8601 time (default: the build time recorded in the SBOM, else now)' })
             .option('replace', { type: 'boolean', default: false, describe: 'Include the build-specific SBOM values (serialNumber, timestamp) in the ids, so each new build is a new update set' }),
         run(cmd.generateCmd))
     .command('import <files..>', 'Load one or more XML files (a.xml b.xml or a glob) and preview them; commit with --commit', (y) =>

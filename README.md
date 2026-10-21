@@ -67,7 +67,9 @@ Requires Node.js 22 (`nvm use` reads `.nvmrc`) and a user with the `admin` role 
    update-set-cicd move --from dev --to test --update-set-name "My Update Set" --commit
    ```
 
-   `--update-set-name` accepts a pattern such as `"My-Project-*"`. If the preview finds a problem, nothing is committed (`--on-conflict fail`, the default) and the output lists each problem.
+   `--update-set-name` accepts a pattern such as `"My-Project-*"`. If the preview finds a problem, nothing is committed (`--on-conflict fail`, the default) and the output lists each problem and the record it affects. `--on-conflict force` commits anyway and still lists each conflict it overrode.
+
+   `move` asks the `--to` instance to retrieve the update set from the `--from` instance through the `sn_cicd` retrieve API. Each `--to` instance needs an **Update Source** record for every `--from` instance it may receive update sets from. Create it on the `--to` instance under System Update Sets > Update Sources, with the `--from` instance's URL and credentials. See [Setting a source for update sets](https://www.servicenow.com/docs/r/application-development/system-update-sets/setting-source-for-update-set.html). `move` picks the active Update Source whose URL matches `--from`. Use `--update-source` to choose one by sys_id, name, or instance ID.
 
 5. Build an update set from the sample app and load it. This needs the clone from step 1:
 
@@ -127,12 +129,15 @@ The pipeline uses two instances: TEST (update sets are committed here first) and
    | `SN_SDK_{TEST,PROD}_USER_PWD` | secret | basic |
 
 5. Create the approval gate. In the repository go to Settings > Environments > New environment, name it `production`, and add Required reviewers.
-6. Run a change through it:
+6. On PROD, create an Update Source record that points at TEST. The PROD step moves the update set that TEST committed, so PROD retrieves it from TEST. Use the TEST URL and credentials, as described in [Setting a source for update sets](https://www.servicenow.com/docs/r/application-development/system-update-sets/setting-source-for-update-set.html). The same applies to any other `--to` and `--from` pair you use with `move`.
+7. Run a change through it:
    1. Create a branch, change the sample app (for example the message in `update-set-cicd-sample/src/server/fix-scripts/hello-update-set-cicd.js`), and bump `version` in `update-set-cicd-sample/package.json`.
    2. Open a PR. The `Sample app: PR build and generate` check builds the app and attaches the generated update set to the run.
    3. Merge to `main`. `Sample app: deploy TEST then PROD` commits the update set on TEST, then waits for approval of the production deployment.
    4. Approve the production deployment in the Actions tab. The update set moves from TEST to PROD.
-   5. If a preview finds a problem, the run stops and nothing is committed. Fix it and merge a new version.
+   5. If a preview finds a conflict, the run stops and nothing is committed. The log names each conflicting record and links to the retrieved update set on the instance. Resolve it there (Keep local or Keep remote), then select Re-run failed jobs on the run to continue, or cancel the run. To override every conflict, start `Sample app: deploy TEST then PROD` by hand with `on-conflict` set to `force`. The log lists each conflict that was overridden.
+
+The preview flags a local edit only when the incoming record carries an edit time to compare. The Now SDK build writes none, so `generate` stamps each record with the build time. An edit made on an instance after the build is flagged. An edit made earlier than the build is not.
 
 The `CLI: unit tests` workflow runs `npm test` on every PR and every push to `main`. To promote existing update sets from TEST to PROD from another repository, call the reusable workflow [`_move-update-sets.yml`](.github/workflows/_move-update-sets.yml).
 

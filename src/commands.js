@@ -8,6 +8,7 @@ import { deliver } from './deliver.js'
 import { UpdateSetXml } from './xml.js'
 import { generate } from './generate.js'
 import { selectionQuery, describeSelection } from './select.js'
+import { pickUpdateSource } from './source.js'
 import { c } from './output.js'
 
 async function open(log, args, which) {
@@ -75,8 +76,8 @@ export async function exportCmd(log, args) {
 }
 
 export async function generateCmd(log, args) {
-    const result = await generate(args.appDir, args.outDir, { replace: args.replace })
-    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}`)
+    const result = await generate(args.appDir, args.outDir, { replace: args.replace, updatedOn: args.updatedOn })
+    log.done(result, `${c.green('✓')} ${result.name}: ${result.records} record(s) → ${c.cyan(result.file)}\n  ${c.dim(`Records without an edit time are stamped ${result.updated_on} UTC (${result.updated_on_source})`)}`)
 }
 
 function deliverOpts(args, commit) {
@@ -99,11 +100,15 @@ export async function move(log, args) {
     const tgt = await open(log, args, instanceRef(args.to, args.toEnv, '--to', true))
     const rows = await sourceUpdateSets(src.inst, args)
     log.info(`Found ${rows.length} update set(s) matching ${describeSelection(args)} (state ${args.state}) on ${src.inst.label}`)
+    const sources = await tgt.inst.query('sys_update_set_source', { query: 'active=true', fields: 'sys_id,name,instance_id,url,active', limit: 100 })
+    const source = pickUpdateSource(sources, { sourceUrl: src.inst.url, named: args.updateSource, targetLabel: tgt.inst.label })
+    log.info(c.dim(`Update Source: ${source.name} (${source.url})`))
     const items = rows.map((r) => ({
         name: r.name,
         sourceSysId: r.sys_id,
         sourceUpdatedOn: r.sys_updated_on,
-        loadXml: () => src.http.exportUpdateSetXml(r.sys_id),
+        sourceLabel: src.inst.label,
+        retrieve: () => tgt.cicd.retrieve(r.sys_id, source.sys_id),
     }))
     const result = await deliver({ target: tgt.inst, http: tgt.http, cicd: tgt.cicd, log, opts: deliverOpts(args, args.commit) }, items)
     log.done(result, summarize(result, `${src.inst.label} → ${tgt.inst.label}`))

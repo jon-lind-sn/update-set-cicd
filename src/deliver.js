@@ -34,7 +34,8 @@ async function previewProblems(target, remoteId, name) {
         const p = { update_set: name, type: r.type?.display_value ?? r.type, description: r.description?.display_value ?? r.description }
         const localUpdate = r.missing_item_update?.value
         if (localUpdate) {
-            const [u] = await target.query('sys_update_xml', { query: `sys_id=${localUpdate}`, fields: 'update_set', displayValue: 'true', limit: 1 })
+            const [u] = await target.query('sys_update_xml', { query: `sys_id=${localUpdate}`, fields: 'name,update_set', displayValue: 'true', limit: 1 })
+            if (u?.name) p.record = u.name
             if (u?.update_set) p.local_update_set = u.update_set
         }
         problems.push(p)
@@ -75,10 +76,17 @@ async function stage(ctx, item) {
         return { ...out, remote_update_set: remote.sys_id, status: 'already_committed' }
     }
     if (!['loaded', 'previewed'].includes(remote?.state)) {
-        const xml = new UpdateSetXml(await item.loadXml())
-        remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
-        out.name = xml.name
-        log.info(`  ${out.name}: uploaded (${remote.sys_id})`)
+        if (item.retrieve) {
+            await item.retrieve(ctx)
+            remote = await findRetrieved(target, item)
+            if (!remote) throw new Error(`Retrieved '${item.name}' but could not find the retrieved update set on ${target.label}`)
+            log.info(`  ${item.name}: retrieved from ${item.sourceLabel} (${remote.sys_id})`)
+        } else {
+            const xml = new UpdateSetXml(await item.loadXml())
+            remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
+            out.name = xml.name
+            log.info(`  ${out.name}: uploaded (${remote.sys_id})`)
+        }
     } else {
         log.info(`  ${item.name}: already retrieved on ${target.label} (${remote.state}), reusing ${remote.sys_id}`)
     }
@@ -95,6 +103,9 @@ async function stage(ctx, item) {
     }
     if (opts.onConflict === 'force') {
         log.info(`  ${out.name}: ${c.yellow(`${problems.length} preview problem(s), will force commit`)}`)
+        for (const p of problems) {
+            log.info(`    ${c.yellow('•')} [${p.type}] ${p.description}${p.record ? ` (${p.record})` : ''}${p.local_update_set ? c.dim(` local update set: ${p.local_update_set}`) : ''}`)
+        }
         return { ...out, status: 'previewed', force: true, problems }
     }
     log.info(`  ${out.name}: ${c.red(`${problems.length} preview problem(s)`)} ${out.url}`)
@@ -111,7 +122,7 @@ export async function commitAll(ctx, ids, force) {
 }
 
 // ctx: {target, http, cicd, log, opts:{onConflict, commit, wait}}
-// items: [{name, sourceSysId, sourceUpdatedOn?, loadXml()}] in commit order.
+// items: [{name, sourceSysId, sourceUpdatedOn?, loadXml() | retrieve(ctx)+sourceLabel}] in commit order.
 export async function deliver(ctx, items) {
     const results = []
     for (const item of items) results.push(await stage(ctx, item))
