@@ -34,7 +34,8 @@ async function previewProblems(target, remoteId, name) {
         const p = { update_set: name, type: r.type?.display_value ?? r.type, description: r.description?.display_value ?? r.description }
         const localUpdate = r.missing_item_update?.value
         if (localUpdate) {
-            const [u] = await target.query('sys_update_xml', { query: `sys_id=${localUpdate}`, fields: 'update_set', displayValue: 'true', limit: 1 })
+            const [u] = await target.query('sys_update_xml', { query: `sys_id=${localUpdate}`, fields: 'name,update_set', displayValue: 'true', limit: 1 })
+            if (u?.name) p.record = u.name
             if (u?.update_set) p.local_update_set = u.update_set
         }
         problems.push(p)
@@ -102,6 +103,9 @@ async function stage(ctx, item) {
     }
     if (opts.onConflict === 'force') {
         log.info(`  ${out.name}: ${c.yellow(`${problems.length} preview problem(s), will force commit`)}`)
+        for (const p of problems) {
+            log.info(`    ${c.yellow('•')} [${p.type}] ${p.description}${p.record ? ` (${p.record})` : ''}${p.local_update_set ? c.dim(` local update set: ${p.local_update_set}`) : ''}`)
+        }
         return { ...out, status: 'previewed', force: true, problems }
     }
     log.info(`  ${out.name}: ${c.red(`${problems.length} preview problem(s)`)} ${out.url}`)

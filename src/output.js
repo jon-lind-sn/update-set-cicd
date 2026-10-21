@@ -53,7 +53,7 @@ export class Output {
         for (const p of err.problems ?? []) {
             if (p.url && p.url !== lastUrl) console.error(`\n  ${c.bold(p.update_set)}  ${c.cyan(p.url)}`)
             lastUrl = p.url
-            console.error(`  ${c.yellow('•')} [${p.type}] ${p.description}`)
+            console.error(`  ${c.yellow('•')} [${p.type}] ${p.description}${p.record ? ` (${p.record})` : ''}`)
             if (p.local_update_set) console.error(c.dim(`    local update set: ${p.local_update_set}`))
         }
         if (this.debugOn && err.stack) console.error(c.dim(err.stack))
