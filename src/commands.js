@@ -105,13 +105,14 @@ export async function move(log, args) {
         sourceUpdatedOn: r.sys_updated_on,
         loadXml: () => src.http.exportUpdateSetXml(r.sys_id),
     }))
-    const result = await deliver({ target: tgt.inst, http: tgt.http, cicd: tgt.cicd, log, opts: deliverOpts(args, !args.previewOnly) }, items)
+    const result = await deliver({ target: tgt.inst, http: tgt.http, cicd: tgt.cicd, log, opts: deliverOpts(args, args.commit) }, items)
     log.done(result, summarize(result, `${src.inst.label} → ${tgt.inst.label}`))
 }
 
 export async function importCmd(log, args) {
-    if (args.auth && args.toEnv) throw new Error('Use either --auth or --to-env, not both')
-    const tgt = await open(log, args, args.toEnv ? instanceRef(undefined, args.toEnv, '--to') : { alias: args.auth })
+    const alias = args.to || args.auth
+    if (alias && args.toEnv) throw new Error('Use either --to (or --auth) or --to-env, not both')
+    const tgt = await open(log, args, args.toEnv ? instanceRef(undefined, args.toEnv, '--to') : { alias })
     const items = []
     for (const file of args.files) {
         const raw = await readFile(file, 'utf8')

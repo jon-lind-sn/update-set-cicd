@@ -40,8 +40,10 @@ const selection = (y, { state = true } = {}) => {
     return y
 }
 
+// Shared by move and import so both preview by default and commit only with --commit.
 const conflict = (y) =>
     y
+        .option('commit', { type: 'boolean', default: false, describe: 'Commit after a clean preview (without it, upload and preview only)' })
         .option('on-conflict', { type: 'string', choices: ['fail', 'force'], default: 'fail', describe: 'Preview problems: fail (stop, nothing committed; resolve in the instance UI and re-run) or force (force_commit)' })
 
 yargs(hideBin(process.argv))
@@ -54,13 +56,14 @@ yargs(hideBin(process.argv))
             .option('query', { alias: 'q', type: 'string', describe: 'Additional encoded query' })
             .option('limit', { type: 'number', default: 20, describe: 'Maximum results' }),
         run(cmd.list))
-    .command('move', 'Copy update sets from --from to --to, preview, and commit', (y) =>
+    .command('move', 'Copy update sets from --from to --to and preview them; commit with --commit', (y) =>
         shared(waitOpts(conflict(selection(y))))
             .option('from', { type: 'string', describe: 'Source credential alias' })
             .option('from-env', { type: 'string', describe: 'Source from environment variables SN_SDK_<NAME>_* (e.g. TEST reads SN_SDK_TEST_INSTANCE_URL)' })
             .option('to', { type: 'string', describe: 'Target credential alias (default: SN_SDK_* environment variables or the default alias)' })
             .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL)' })
-            .option('preview-only', { type: 'boolean', default: false, describe: 'Upload and preview, report problems, do not commit' }),
+            .example('$0 move --from dev --to test --update-set-name "My Update Set"', 'Preview only')
+            .example('$0 move --from dev --to test --update-set-name "My Update Set" --commit', 'Preview, then commit'),
         run(cmd.move))
     .command('commit', 'Commit retrieved update sets that are already on the instance', (y) =>
         shared(waitOpts(auth(selection(y, { state: false }))))
@@ -80,16 +83,22 @@ yargs(hideBin(process.argv))
             .option('out-dir', { type: 'string', default: '.', describe: 'Directory to write the update set XML to' })
             .option('replace', { type: 'boolean', default: false, describe: 'Include the build-specific SBOM values (serialNumber, timestamp) in the ids, so each new build is a new update set' }),
         run(cmd.generateCmd))
-    .command('import <files..>', 'Load local XML files, preview, and optionally commit', (y) =>
+    .command('import <files..>', 'Load one or more XML files (a.xml b.xml or a glob) and preview them; commit with --commit', (y) =>
         shared(waitOpts(conflict(auth(y))))
-            .positional('files', { type: 'string', describe: 'Update set XML file(s), committed in the order given' })
-            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL), instead of --auth' })
-            .option('commit', { type: 'boolean', default: false, describe: 'Commit after a clean preview' }),
+            .positional('files', { type: 'string', describe: 'One or more update set XML files separated by spaces, or a shell wildcard such as *.xml. They are loaded and committed in the order given' })
+            .option('to', { type: 'string', describe: 'Target credential alias (same as --auth)' })
+            .option('to-env', { type: 'string', describe: 'Target from environment variables SN_SDK_<NAME>_* (e.g. PROD reads SN_SDK_PROD_INSTANCE_URL), instead of --to' })
+            .example('$0 import 01-base.xml 02-feature.xml --to dev', 'Preview two files, in that order')
+            .example('$0 import *.xml --to dev', 'Preview only')
+            .example('$0 import *.xml --to dev --commit', 'Preview, then commit')
+            .example('$0 import STRY12345-*.xml --to dev', 'Every file for one story (STRY12345-1.xml, STRY12345-2.xml, ...)')
+            .example('$0 import STRY12345-?.xml --to dev', 'One character only (-1 to -9, not -10)'),
         run(cmd.importCmd))
+    .epilogue('Run "update-set-cicd <command> --help" for the options and examples of one command, such as "update-set-cicd import --help".')
     .demandCommand(1)
     .strictCommands()
     .strict()
     .alias('h', 'help')
     .alias('v', 'version')
-    .wrap(Math.min(100, process.stdout.columns || 100))
+    .wrap(null)
     .parse()
