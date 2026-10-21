@@ -62,5 +62,5 @@ jobs:
         run: >
           npx github:jon-lind-sn/update-set-cicd move
           --update-set-name "$PATTERN"
-          --from-env "$FROM" --to-env "$TO"
+          --from-env "$FROM" --to-env "$TO" --commit
           --on-conflict "$ON_CONFLICT" -o json

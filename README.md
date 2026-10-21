@@ -49,22 +49,22 @@ Requires Node.js 22 (`nvm use` reads `.nvmrc`) and a user with the `admin` role 
 2. Store a credential alias for each instance. The command prompts for the credentials:
 
    ```bash
-   npx @servicenow/sdk auth --add https://dev1.service-now.com --type basic --alias dev1
-   npx @servicenow/sdk auth --add https://dev2.service-now.com --type basic --alias dev2
+   npx @servicenow/sdk auth --add https://{dev-instance}.service-now.com --type basic --alias dev
+   npx @servicenow/sdk auth --add https://{test-instance}.service-now.com --type basic --alias test
    npx @servicenow/sdk auth --list
    ```
 
 3. List completed update sets on an instance (a read-only check that the credential works):
 
    ```bash
-   update-set-cicd list --auth dev1
+   update-set-cicd list --auth dev
    ```
 
-4. Copy an update set from one instance to another. Preview first, then commit:
+4. Copy an update set from one instance to another. `move` previews by default. Add `--commit` to commit after a clean preview:
 
    ```bash
-   update-set-cicd move --from dev1 --to dev2 --update-set-name "My Update Set" --preview-only
-   update-set-cicd move --from dev1 --to dev2 --update-set-name "My Update Set"
+   update-set-cicd move --from dev --to test --update-set-name "My Update Set"
+   update-set-cicd move --from dev --to test --update-set-name "My Update Set" --commit
    ```
 
    `--update-set-name` accepts a pattern such as `"My-Project-*"`. If the preview finds a problem, nothing is committed (`--on-conflict fail`, the default) and the output lists each problem.
@@ -74,8 +74,10 @@ Requires Node.js 22 (`nvm use` reads `.nvmrc`) and a user with the `admin` role 
    ```bash
    cd update-set-cicd-sample && npm ci && npx now-sdk build && cd ..
    node bin/update-set-cicd.js generate update-set-cicd-sample/dist/app --out-dir out
-   node bin/update-set-cicd.js import out/*.xml --auth dev1 --commit
+   node bin/update-set-cicd.js import out/*.xml --to dev --commit
    ```
+
+   `import` accepts several files, such as `import 01-base.xml 02-feature.xml --to dev`, and loads them in that order. Your shell expands wildcards before the CLI runs, so `STRY12345-*.xml` and `STRY12345-?.xml` both work. Matches expand in alphabetical order, so `-10` sorts before `-2`. Name or list the files explicitly when the order matters.
 
    Running `import` again for the same version reports `already committed` and skips it. Each new `version` in `package.json` produces a new update set.
 
@@ -83,12 +85,12 @@ Requires Node.js 22 (`nvm use` reads `.nvmrc`) and a user with the `admin` role 
 |---|---|
 | `list` | List update sets on an instance |
 | `move` | Copy update sets from one instance to another, preview, and commit |
-| `import <files>` | Load Extensible Markup Language (XML) files, preview, and optionally commit (`--commit`) |
+| `import <files..>` | Load one or more Extensible Markup Language (XML) files, separated by spaces or matched by a glob, preview them, and optionally commit (`--commit`). Files load in the order given |
 | `export` | Write update sets to local XML files |
 | `commit` / `rollback` | Commit retrieved update sets already on the instance, or back one out |
 | `generate <app-dir>` | Build an update set XML from a Now SDK build folder (`dist/app`) |
 
-Pick instances with a stored alias (`--auth`, `--from`, `--to`) or with environment variables (`--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`). Add `-o json` for machine-readable output. Run any command with `--help` for all options.
+Pick instances with a stored alias (`--auth`, `--from`, `--to`) or with environment variables (`--from-env TEST --to-env PROD` reads `SN_SDK_TEST_*` and `SN_SDK_PROD_*`). Add `-o json` for machine-readable output. Run `update-set-cicd --help` for the command list, and `update-set-cicd <command> --help` (for example `update-set-cicd import --help`) for that command's options and examples.
 
 ## Try the pipeline
 
@@ -103,7 +105,7 @@ The pipeline uses two instances: TEST (update sets are committed here first) and
 
    ```bash
    SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_AUTH_TYPE=oauth \
-   SN_SDK_INSTANCE_URL=https://your-instance.service-now.com \
+   SN_SDK_INSTANCE_URL=https://{dev-instance}.service-now.com \
    SN_SDK_OAUTH_CLIENT_ID=<client-id> SN_SDK_OAUTH_CLIENT_SECRET='<client-secret>' \
    npx @servicenow/sdk query sys_user -q "active=true" --limit 1 -o json
    ```

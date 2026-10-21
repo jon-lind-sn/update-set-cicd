@@ -51,8 +51,8 @@ ask_secret() {
   echo "$reply"
 }
 
-# Accepts an instance name (acme), a host (acme.service-now.com), or a URL
-# (https://acme.service-now.com/) and returns https://<host>: lowercase, no
+# Accepts an instance name ({instance}), a host ({instance}.service-now.com), or a URL
+# (https://{instance}.service-now.com/) and returns https://<host>: lowercase, no
 # path, no trailing slash. A bare name gets ".service-now.com" appended.
 normalize_instance_url() {
   local v scheme host
