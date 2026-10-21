@@ -61,6 +61,15 @@ export class Cicd {
         return wait ? this.poll(id) : started
     }
 
+    // The target pulls the update set from the source named by an Update Source
+    // record, so the rows keep their real edit times and the preview can flag
+    // a newer local change.
+    retrieve(updateSetId, updateSourceId, { wait = true } = {}) {
+        return this._run('update_set/retrieve', {
+            query: { update_set_id: updateSetId, update_source_id: updateSourceId, auto_preview: 'false', cleanup_retrieved: 'false' },
+        }, wait)
+    }
+
     async preview(remoteId) {
         const started = await this._start(`update_set/preview/${remoteId}`)
         return this.poll(started.links.progress.id, { allowFailure: true })

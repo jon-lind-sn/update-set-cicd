@@ -75,10 +75,17 @@ async function stage(ctx, item) {
         return { ...out, remote_update_set: remote.sys_id, status: 'already_committed' }
     }
     if (!['loaded', 'previewed'].includes(remote?.state)) {
-        const xml = new UpdateSetXml(await item.loadXml())
-        remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
-        out.name = xml.name
-        log.info(`  ${out.name}: uploaded (${remote.sys_id})`)
+        if (item.retrieve) {
+            await item.retrieve(ctx)
+            remote = await findRetrieved(target, item)
+            if (!remote) throw new Error(`Retrieved '${item.name}' but could not find the retrieved update set on ${target.label}`)
+            log.info(`  ${item.name}: retrieved from ${item.sourceLabel} (${remote.sys_id})`)
+        } else {
+            const xml = new UpdateSetXml(await item.loadXml())
+            remote = { sys_id: await upload(ctx, xml), state: 'loaded' }
+            out.name = xml.name
+            log.info(`  ${out.name}: uploaded (${remote.sys_id})`)
+        }
     } else {
         log.info(`  ${item.name}: already retrieved on ${target.label} (${remote.state}), reusing ${remote.sys_id}`)
     }
@@ -111,7 +118,7 @@ export async function commitAll(ctx, ids, force) {
 }
 
 // ctx: {target, http, cicd, log, opts:{onConflict, commit, wait}}
-// items: [{name, sourceSysId, sourceUpdatedOn?, loadXml()}] in commit order.
+// items: [{name, sourceSysId, sourceUpdatedOn?, loadXml() | retrieve(ctx)+sourceLabel}] in commit order.
 export async function deliver(ctx, items) {
     const results = []
     for (const item of items) results.push(await stage(ctx, item))
